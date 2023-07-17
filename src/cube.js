@@ -110,14 +110,25 @@ class Cube {
         this.computedMeasures[measureId] = expression;
     }
 
-    createStoredMeasure(measureId, rules = {}, type = 'float32', defaultValue = 0) {
+    createStoredMeasure(
+        measureId,
+        rules = {},
+        type = 'float32',
+        defaultValue = 0,
+        drillUpBasedOn = ''
+    ) {
         if (!/^[a-z][_a-z0-9]*$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (this.storedMeasures[measureId] !== undefined)
             throw new Error(`This measure already exists: ${measureId}`);
 
-        this.storedMeasures[measureId] = new InMemoryStore(this.storeSize, type, defaultValue);
+        this.storedMeasures[measureId] = new InMemoryStore(
+            this.storeSize,
+            type,
+            defaultValue,
+            drillUpBasedOn
+        );
         this.storedMeasuresRules[measureId] = rules;
     }
 
@@ -140,7 +151,8 @@ class Cube {
         this.storedMeasures[measureId] = new InMemoryStore(
             this.storeSize,
             originMemoryStore._type,
-            originMemoryStore._defaultValue
+            originMemoryStore._defaultValue,
+            originMemoryStore._drillUpBasedOn
         );
     }
 
@@ -717,10 +729,25 @@ class Cube {
         Object.assign(newCube.computedMeasures, this.computedMeasures);
         Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
         for (let measureId in this.storedMeasures) {
+            const drillUpBaseOn = this.storedMeasures[measureId]._drillUpBasedOn;
+
+            let dist = drillUpBaseOn
+                ? this.storedMeasures[drillUpBaseOn]
+                      .dice(oldDimensions, [oldDimensions[dimIdx]])
+                      .getData()
+                : null;
+
+            if (dist) {
+                //divide by sum of all values
+                const sum = dist.reduce((s, d) => s + d, 0);
+                dist = dist.map(d => d.value / sum);
+            }
+
             newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
                 this.dimensions,
                 newDimensions,
-                this.storedMeasuresRules[measureId][dimensionId]
+                this.storedMeasuresRules[measureId][dimensionId],
+                dist
             );
         }
 
