@@ -48,7 +48,8 @@ declare module '@growblocks/olap-in-memory' {
             name: string,
             opts?: Record<string, string>,
             measureType?: string,
-            defaultValue?: number
+            defaultValue?: number,
+            drillUpBasedOn?: string
         ): void;
         clone(): Cube;
         cloneStoredMeasure(originCube: Cube, measureId: string): void;

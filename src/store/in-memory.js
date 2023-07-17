@@ -36,10 +36,18 @@ class InMemoryStore {
         }
     }
 
-    constructor(size, type = 'float32', defaultValue = NaN, data = undefined, status = undefined) {
+    constructor(
+        size,
+        type = 'float32',
+        defaultValue = NaN,
+        drillUpBasedOn = '',
+        data = undefined,
+        status = undefined
+    ) {
         this._size = size;
         this._type = type;
         this._defaultValue = defaultValue;
+        this._drillUpBasedOn = drillUpBasedOn;
         this._status = new Int8Array(size);
         this._status.fill(STATUS_EMPTY);
 
@@ -65,6 +73,7 @@ class InMemoryStore {
             this._size,
             this._type,
             this._defaultValue,
+            this._drillUpBasedOn,
             this._data,
             this._status
         );
@@ -139,7 +148,12 @@ class InMemoryStore {
     }
 
     reorder(oldDimensions, newDimensions) {
-        const newStore = new InMemoryStore(this._size, this._type, this._defaultValue);
+        const newStore = new InMemoryStore(
+            this._size,
+            this._type,
+            this._defaultValue,
+            this._drillUpBasedOn
+        );
 
         const numDimensions = newDimensions.length;
         const newToOldDimIdx = newDimensions.map(newDim => oldDimensions.indexOf(newDim));
@@ -181,7 +195,12 @@ class InMemoryStore {
         });
 
         // Rewrite data vector.
-        const newStore = new InMemoryStore(newLength, this._type, this._defaultValue);
+        const newStore = new InMemoryStore(
+            newLength,
+            this._type,
+            this._defaultValue,
+            this._drillUpBasedOn
+        );
         const newDimIdx = new Uint32Array(numDimensions);
         for (let newIdx = 0; newIdx < newLength; ++newIdx) {
             // Decompose new index into dimensions indexes
@@ -205,7 +224,7 @@ class InMemoryStore {
         return newStore;
     }
 
-    drillUp(oldDimensions, newDimensions, method = 'sum') {
+    drillUp(oldDimensions, newDimensions, method = 'sum', distribution = []) {
         const oldSize = this._size;
         const newSize = newDimensions.reduce((m, d) => m * d.numItems, 1);
         const numDimensions = newDimensions.length;
@@ -215,7 +234,12 @@ class InMemoryStore {
             return oldDimensions[index].getGroupIndexFromRootIndexMap(newDim.rootAttribute);
         });
 
-        const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
+        const newStore = new InMemoryStore(
+            newSize,
+            this._type,
+            this._defaultValue,
+            this._drillUpBasedOn
+        );
         const contributions = new Uint16Array(newSize);
 
         newStore._status.fill(0); // we'll OR the values from the parent buffer, so we need to init at zero.
@@ -249,6 +273,11 @@ class InMemoryStore {
                     else if (method == 'sum' || method == 'average')
                         newStore._data[newIdx] += oldValue;
                     else if (method == 'product') newStore._data[newIdx] *= oldValue;
+                    else if (method == 'distribution') {
+                        // TODO: check if this index is correct
+                        const dist = distribution[oldIndexCopy];
+                        newStore._data[newIdx] += oldValue * dist;
+                    }
                 }
 
                 newStore._status[newIdx] |= this._status[oldIdx];
@@ -266,7 +295,7 @@ class InMemoryStore {
     }
 
     /** fixme: This could be more memory efficient by doing like the other, instead of mapping all indexes */
-    drillDown(oldDimensions, newDimensions, method = 'sum', distributions) {
+    drillDown(oldDimensions, newDimensions, method = 'sum', distribution = []) {
         const useRounding = this._type == 'int32' || this._type == 'uint32';
         const oldSize = this._size;
         const newSize = newDimensions.reduce((m, d) => m * d.numItems, 1);
@@ -303,7 +332,12 @@ class InMemoryStore {
             contributionsTotal[oldIdx] += 1;
         }
 
-        const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
+        const newStore = new InMemoryStore(
+            newSize,
+            this._type,
+            this._defaultValue,
+            this._drillUpBasedOn
+        );
 
         for (let newIdx = 0; newIdx < newSize; ++newIdx) {
             const oldIdx = idxNewOld[newIdx];
@@ -313,16 +347,16 @@ class InMemoryStore {
                 newStore._status[newIdx] = this._status[oldIdx];
                 if (numContributions > 1) newStore._status[newIdx] |= STATUS_INTERPOLATED;
 
-                if (distributions) {
+                if (distribution.length) {
                     const addedDimLength = newSize / oldSize;
-                    const sharedDimSize = distributions.length / addedDimLength;
+                    const sharedDimSize = distribution.length / addedDimLength;
                     const distIndex =
                         Math.floor(newIdx / (newSize / sharedDimSize)) * addedDimLength +
                         (newIdx % addedDimLength);
-                    if (distributions[distIndex] == null)
+                    if (distribution[distIndex] == null)
                         throw new Error('distribution missing for index ' + distIndex);
 
-                    newStore._data[newIdx] = this._data[oldIdx] * distributions[distIndex];
+                    newStore._data[newIdx] = this._data[oldIdx] * distribution[distIndex];
                 } else {
                     if (method === 'sum') {
                         if (useRounding) {
