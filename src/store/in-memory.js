@@ -104,6 +104,13 @@ class InMemoryStore {
         return this._status[index] & STATUS_SET ? this._data[index] : NaN;
     }
 
+    getData() {
+        const result = new Array(this._data.length);
+        for (let i = 0; i < this._data.length; ++i) result[i] = this.getValue(i);
+
+        return result;
+    }
+
     getStatus(index) {
         return this._status[index];
     }
@@ -261,22 +268,26 @@ class InMemoryStore {
 
             if (this._status[oldIdx] & STATUS_SET) {
                 let oldValue = this._data[oldIdx];
-                if (contributions[newIdx] === 0) newStore._data[newIdx] = oldValue;
-                else {
-                    if (method == 'last') newStore._data[newIdx] = oldValue;
-                    else if (method == 'highest')
-                        newStore._data[newIdx] =
-                            newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx];
-                    else if (method == 'lowest')
-                        newStore._data[newIdx] =
-                            newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue;
-                    else if (method == 'sum' || method == 'average')
-                        newStore._data[newIdx] += oldValue;
-                    else if (method == 'product') newStore._data[newIdx] *= oldValue;
-                    else if (method == 'distribution') {
-                        // TODO: check if this index is correct
-                        const dist = distribution[oldIndexCopy];
-                        newStore._data[newIdx] += oldValue * dist;
+                if (method == 'distribution' && distribution.length > 0) {
+                    const dist = distribution[oldIdx];
+                    newStore._data[newIdx] += oldValue * dist;
+                } else {
+                    if (contributions[newIdx] === 0) newStore._data[newIdx] = oldValue;
+                    else {
+                        if (method == 'last') newStore._data[newIdx] = oldValue;
+                        else if (method == 'highest')
+                            newStore._data[newIdx] =
+                                newStore._data[newIdx] < oldValue
+                                    ? oldValue
+                                    : newStore._data[newIdx];
+                        else if (method == 'lowest')
+                            newStore._data[newIdx] =
+                                newStore._data[newIdx] < oldValue
+                                    ? newStore._data[newIdx]
+                                    : oldValue;
+                        else if (method == 'sum' || method == 'average')
+                            newStore._data[newIdx] += oldValue;
+                        else if (method == 'product') newStore._data[newIdx] *= oldValue;
                     }
                 }
 

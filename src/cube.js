@@ -731,16 +731,21 @@ class Cube {
         for (let measureId in this.storedMeasures) {
             const drillUpBaseOn = this.storedMeasures[measureId]._drillUpBasedOn;
 
-            let dist = drillUpBaseOn
-                ? this.storedMeasures[drillUpBaseOn]
-                      .dice(oldDimensions, [oldDimensions[dimIdx]])
-                      .getData()
-                : null;
+            let dist = drillUpBaseOn ? this.storedMeasures[drillUpBaseOn].getData() : null;
 
             if (dist) {
-                //divide by sum of all values
-                const sum = dist.reduce((s, d) => s + d, 0);
-                dist = dist.map(d => d.value / sum);
+                // collect dimensions which idx are higher than the dimension we are drilling up
+                const innerDimensions = this.dimensions.slice(dimIdx + 1);
+                const innerDimensionsLength = innerDimensions.reduce(
+                    (acc, dim) => acc * dim.getItems().length,
+                    1
+                );
+                // divide by sum of all values
+                const sum = dist.reduce((s, d, idx) => {
+                    s[idx % innerDimensionsLength] = s[idx % innerDimensionsLength] + d;
+                    return s;
+                }, new Array(innerDimensionsLength).fill(0));
+                dist = dist.map((d, idx) => d / sum[idx % innerDimensionsLength]);
             }
 
             newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
