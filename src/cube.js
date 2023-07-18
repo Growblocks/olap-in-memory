@@ -735,19 +735,40 @@ class Cube {
 
             if (dist) {
                 // collect dimensions which idx are higher than the dimension we are drilling up
-                const innerDimensions = this.dimensions.slice(dimIdx + 1);
+                const outerDimensions = this.dimensions.slice(0, dimIdx);
+                const innerDimensions = this.dimensions.slice(dimIdx);
                 const innerDimensionsLength = innerDimensions.reduce(
                     (acc, dim) => acc * dim.getItems().length,
                     1
-                );
+                ); // 5 (2022-01 --> 2022-05)
+                const outerDimensionsLength = outerDimensions.reduce(
+                    (acc, dim) => acc * dim.getItems().length,
+                    1
+                ); // 2 (DIM1_A, DIM1_B)
+
                 // divide by sum of all values
                 const sum = dist.reduce((s, d, idx) => {
-                    s[idx % innerDimensionsLength] = s[idx % innerDimensionsLength] + d;
+                    const shift =
+                        outerDimensionsLength > 1
+                            ? Math.floor(idx / (innerDimensionsLength * outerDimensionsLength)) *
+                              innerDimensionsLength
+                            : 0;
+                    s[shift + (idx % innerDimensionsLength)] =
+                        s[shift + (idx % innerDimensionsLength)] + d;
+                    console.log({ shift, s });
                     return s;
-                }, new Array(innerDimensionsLength).fill(0));
-                dist = dist.map((d, idx) => d / sum[idx % innerDimensionsLength]);
+                }, new Array(innerDimensionsLength * outerDimensionsLength).fill(0));
+                dist = dist.map((d, idx) => {
+                    const shift =
+                        outerDimensionsLength > 1
+                            ? Math.floor(idx / (innerDimensionsLength * outerDimensionsLength)) *
+                              innerDimensionsLength
+                            : 0;
+                    return d / sum[shift + (idx % innerDimensionsLength)];
+                });
             }
 
+            console.log({ dist });
             newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
                 this.dimensions,
                 newDimensions,
