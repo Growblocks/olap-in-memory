@@ -1,4 +1,3 @@
-const util = require('util');
 const merge = require('lodash.merge');
 const cloneDeep = require('lodash.clonedeep');
 const DimensionFactory = require('./dimension/factory');
@@ -732,9 +731,9 @@ class Cube {
         for (let measureId in this.storedMeasures) {
             const drillUpBaseOn = this.storedMeasures[measureId]._drillUpBasedOn;
 
-            let dist = drillUpBaseOn ? this.storedMeasures[drillUpBaseOn].getData() : null;
+            if (drillUpBaseOn) {
+                const measureData = this.storedMeasures[drillUpBaseOn].getData();
 
-            if (dist) {
                 // collect dimensions which idx are higher than the dimension we are drilling up
                 const outerDimensions = this.dimensions.slice(0, dimIdx);
                 const innerDimensions = this.dimensions.slice(dimIdx + 1);
@@ -748,34 +747,38 @@ class Cube {
                     1
                 );
 
-                // divide by sum of all values
-                const sum = dist.reduce((s, d, idx) => {
-                    const shift =
-                        outerDimensionsLength > 1
-                            ? Math.floor(idx / (innerDimensionsLength * dimLength)) *
-                              innerDimensionsLength
-                            : 0;
-                    const sumIdx = shift + (idx % innerDimensionsLength);
-                    // console.log({ shift, sumIdx });
-                    s[sumIdx] = s[sumIdx] + d;
+                const getShift = idx =>
+                    outerDimensionsLength > 1
+                        ? Math.floor(idx / (innerDimensionsLength * dimLength)) *
+                          innerDimensionsLength
+                        : 0;
+
+                const getIdx = idx => getShift(idx) + (idx % innerDimensionsLength);
+
+                // get the sum of the measure data for each group
+                const sum = measureData.reduce((s, d, idx) => {
+                    s[getIdx(idx)] += d;
                     return s;
                 }, new Array(innerDimensionsLength * outerDimensionsLength).fill(0));
-                dist = dist.map((d, idx) => {
-                    const shift =
-                        outerDimensionsLength > 1
-                            ? Math.floor(idx / (innerDimensionsLength * dimLength)) *
-                              innerDimensionsLength
-                            : 0;
-                    return d / sum[shift + (idx % innerDimensionsLength)];
-                });
-            }
 
-            newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
-                this.dimensions,
-                newDimensions,
-                this.storedMeasuresRules[measureId][dimensionId],
-                dist
-            );
+                // compute the distribution of the measure data for each group
+                const distribution = measureData.map((d, idx) => {
+                    return d / sum[getIdx(idx)];
+                });
+
+                newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
+                    this.dimensions,
+                    newDimensions,
+                    this.storedMeasuresRules[measureId][dimensionId],
+                    distribution
+                );
+            } else {
+                newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
+                    this.dimensions,
+                    newDimensions,
+                    this.storedMeasuresRules[measureId][dimensionId]
+                );
+            }
         }
 
         return newCube;
