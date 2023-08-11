@@ -53,6 +53,7 @@ declare module '@growblocks/olap-in-memory' {
         clone(): Cube;
         cloneStoredMeasure(originCube: Cube, measureId: string): void;
         computedMeasures: Object;
+        collapse(): Cube;
         dice(dimensionId: string, attribute: string, value: string[]): Cube;
         diceRange(dimensionId: string, attribute: string, start: string, end: string): Cube;
         dimensionIds: string[];
@@ -64,6 +65,7 @@ declare module '@growblocks/olap-in-memory' {
         getDistribution(measure: string, filter: Record<string, string[]>): number;
         getNestedArray(measure: string): NestedNumberArray;
         getNestedObject(measure: string): NestedNumberObject;
+        getNestedObjects(measureIds: string[]): NestedNumberObject;
         getSingleData(measure: string, coords: Record<string, string>): number;
         scan(
             excludeDimensionIds: string[],

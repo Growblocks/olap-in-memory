@@ -209,6 +209,12 @@ class Cube {
         } else throw new Error(`dropMeasure: no such measure: ${measureId}`);
     }
 
+    collapse() {
+        return this.dimensionIds.reduce((acc, curr) => {
+            return acc.slice(curr, 'all', 'all');
+        }, this);
+    }
+
     getData(measureId) {
         if (this.storedMeasures[measureId] !== undefined)
             return this.storedMeasures[measureId].data;
@@ -278,6 +284,29 @@ class Cube {
                 if (j & (1 << i)) subCube = subCube.drillUp(this.dimensions[i].id, 'all');
 
             merge(result, subCube.getNestedObject(measureId, false, withMetadata));
+        }
+
+        return result;
+    }
+
+    getNestedObjects(measureIds, withTotals = false, withMetadata = false) {
+        if (!withTotals || this.dimensions.length == 0) {
+            return measureIds.reduce((acc, measureId) => {
+                const data = this.getData(measureId);
+                const status = this.getStatus(measureId);
+
+                acc[measureId] = toNestedObject(data, status, this.dimensions, withMetadata);
+                return acc;
+            }, {});
+        }
+
+        const result = {};
+        for (let j = 0; j < 2 ** this.dimensions.length; ++j) {
+            let subCube = this;
+            for (let i = 0; i < this.dimensions.length; ++i)
+                if (j & (1 << i)) subCube = subCube.drillUp(this.dimensions[i].id, 'all');
+
+            merge(result, subCube.getNestedObjects(measureIds, false, withMetadata));
         }
 
         return result;
