@@ -53,6 +53,7 @@ declare module '@growblocks/olap-in-memory' {
         clone(): Cube;
         cloneStoredMeasure(originCube: Cube, measureId: string): void;
         computedMeasures: Object;
+        copyMeasureData(sourceMeasureId, targetMeasureId, dimensionsFilter = {}): void;
         collapse(): Cube;
         dice(dimensionId: string, attribute: string, value: string[]): Cube;
         diceRange(dimensionId: string, attribute: string, start: string, end: string): Cube;
