@@ -617,6 +617,37 @@ class Cube {
         return newCube;
     }
 
+    copyMeasureData(sourceMeasureId, targetMeasureId, dimensionsFilter = {}) {
+        const _dimensionsFilter = {};
+        for (const [key, value] of Object.entries(dimensionsFilter)) {
+            if (typeof value === 'string') {
+                _dimensionsFilter[key] = [value];
+            } else {
+                _dimensionsFilter[key] = value;
+            }
+        }
+
+        const unspecifiedDimensions = this.dimensionIds.filter(
+            dimensionId => dimensionsFilter[dimensionId] === undefined
+        );
+
+        const combinations = getCombinations(
+            unspecifiedDimensions.reduce(
+                (acc, dimensionId) => ({
+                    ...acc,
+                    [dimensionId]: this.getDimension(dimensionId).getItems(),
+                }),
+                _dimensionsFilter
+            )
+        );
+
+        for (let i = 0; i < combinations.length; i++) {
+            const combination = combinations[i];
+            const value = this.getSingleData(sourceMeasureId, combination);
+            this.setSingleData(targetMeasureId, combination, value);
+        }
+    }
+
     keepDimensions(dimensionIds) {
         let cube = this;
         for (let dimension of this.dimensions) {
