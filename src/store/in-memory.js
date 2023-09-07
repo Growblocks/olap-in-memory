@@ -36,12 +36,20 @@ class InMemoryStore {
         }
     }
 
-    constructor(size, type = 'float32', defaultValue = NaN, data = undefined, status = undefined) {
+    constructor(
+        size,
+        type = 'float32',
+        defaultValue = NaN,
+        data = undefined,
+        status = undefined,
+        statusMap = undefined
+    ) {
         this._size = size;
         this._type = type;
         this._defaultValue = defaultValue;
         this._status = new Int8Array(size);
         this._status.fill(STATUS_EMPTY);
+        this._statusMap = typeof statusMap === 'undefined' ? new Map() : statusMap;
 
         if (type == 'int32') this._data = new Int32Array(size);
         else if (type == 'uint32') this._data = new Uint32Array(size);
@@ -66,7 +74,8 @@ class InMemoryStore {
             this._type,
             this._defaultValue,
             this._data,
-            this._status
+            this._status,
+            this._statusMap
         );
     }
 
@@ -77,6 +86,7 @@ class InMemoryStore {
             status: this._status,
             data: this._data,
             defaultValue: this._defaultValue,
+            statusMap: Array.from(this._statusMap.entries()),
         });
     }
 
@@ -88,6 +98,7 @@ class InMemoryStore {
         store._status = data.status;
         store._data = data.data;
         store._defaultValue = data.defaultValue;
+        store._statusMap = new Map(data.statusMap);
         return store;
     }
 
@@ -103,6 +114,7 @@ class InMemoryStore {
         this._data[index] = value;
         this._status[index] =
             typeof value === 'number' && !Number.isNaN(value) ? status : STATUS_EMPTY;
+        this._statusMap.set(index, this._status[index]);
     }
 
     load(otherStore, myDimensions, hisDimensions) {
@@ -145,7 +157,8 @@ class InMemoryStore {
         const newToOldDimIdx = newDimensions.map(newDim => oldDimensions.indexOf(newDim));
 
         const oldDimIdx = new Uint32Array(numDimensions);
-        for (let oldIdx = 0; oldIdx < this._size; ++oldIdx) {
+
+        for (let [oldIdx, value] of this._statusMap) {
             // Decompose new index into dimensions indexes
             let oldIdxCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -162,6 +175,7 @@ class InMemoryStore {
 
             newStore._status[newIdx] = this._status[oldIdx];
             newStore._data[newIdx] = this._data[oldIdx];
+            newStore._statusMap.set(newIdx, newStore._status[newIdx]);
         }
 
         return newStore;
@@ -221,8 +235,8 @@ class InMemoryStore {
         newStore._status.fill(0); // we'll OR the values from the parent buffer, so we need to init at zero.
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
-        for (let oldIdx = 0; oldIdx < oldSize; ++oldIdx) {
-            // Decompose old index into dimensions indexes
+
+        for (const [oldIdx] in this._statusMap) {
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
@@ -252,6 +266,7 @@ class InMemoryStore {
                 }
 
                 newStore._status[newIdx] |= this._status[oldIdx];
+                newStore._statusMap.set(newIdx, newStore._status[newIdx]);
                 contributions[newIdx] += 1;
             } else {
                 newStore._status[newIdx] |= STATUS_EMPTY;
@@ -311,6 +326,7 @@ class InMemoryStore {
             if (this._status[oldIdx] & STATUS_SET) {
                 const numContributions = contributionsTotal[oldIdx];
                 newStore._status[newIdx] = this._status[oldIdx];
+                newStore._statusMap.set(newIdx, newStore._status[newIdx]);
                 if (numContributions > 1) newStore._status[newIdx] |= STATUS_INTERPOLATED;
 
                 if (distributions) {
