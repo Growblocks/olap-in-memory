@@ -101,5 +101,9 @@ declare module '@growblocks/olap-in-memory' {
         storedMeasureIds: string[];
         storeSize: number;
         swapDimensions(dim1: string, dim2: string): Cube;
+        updateStoredMeasureRules(
+            measureId: string,
+            cb: (rules: Record<string, string>) => void
+        ): void;
     }
 }

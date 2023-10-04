@@ -527,6 +527,11 @@ class Cube {
                 );
     }
 
+    updateStoredMeasureRules(measureId, cb) {
+        const newRules = cb(this.storedMeasuresRules[measureId]);
+        this.storedMeasuresRules[measureId] = newRules;
+    }
+
     project(dimensionIds) {
         return this.keepDimensions(dimensionIds).reorderDimensions(dimensionIds);
     }
