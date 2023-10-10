@@ -188,6 +188,10 @@ class Cube {
         } else if (this.storedMeasures[oldMeasureId]) {
             this.storedMeasures[newMeasureId] = this.storedMeasures[oldMeasureId];
             this.storedMeasuresRules[newMeasureId] = this.storedMeasuresRules[oldMeasureId];
+            Object.keys(this.storedMeasures).forEach(measure => {
+                if (this.storedMeasures[measure]._drillUpBasedOn === oldMeasureId)
+                    this.storedMeasures[measure]._drillUpBasedOn = newMeasureId;
+            });
             delete this.storedMeasures[oldMeasureId];
             delete this.storedMeasuresRules[oldMeasureId];
 
@@ -792,10 +796,13 @@ class Cube {
                 const getIdx = idx => getShift(idx) + (idx % innerDimensionsLength);
 
                 // get the sum of the measure data for each group
-                const sum = measureData.reduce((s, d, idx) => {
-                    s[getIdx(idx)] += d;
-                    return s;
-                }, new Array(innerDimensionsLength * outerDimensionsLength).fill(0));
+                const sum = measureData.reduce(
+                    (s, d, idx) => {
+                        s[getIdx(idx)] += d;
+                        return s;
+                    },
+                    new Array(innerDimensionsLength * outerDimensionsLength).fill(0)
+                );
 
                 // compute the distribution of the measure data for each group
                 const distribution = measureData.map((d, idx) => {
