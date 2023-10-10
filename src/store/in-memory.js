@@ -86,6 +86,7 @@ class InMemoryStore {
             status: this._status,
             data: this._data,
             defaultValue: this._defaultValue,
+            drillUpBasedOn: this._drillUpBasedOn,
         });
     }
 
@@ -97,6 +98,7 @@ class InMemoryStore {
         store._status = data.status;
         store._data = data.data;
         store._defaultValue = data.defaultValue;
+        store._drillUpBasedOn = data.drillUpBasedOn;
         return store;
     }
 
