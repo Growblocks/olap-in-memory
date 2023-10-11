@@ -795,18 +795,19 @@ class Cube {
 
                 const getIdx = idx => getShift(idx) + (idx % innerDimensionsLength);
 
-                // get the sum of the measure data for each group
-                const sum = measureData.reduce(
-                    (s, d, idx) => {
-                        s[getIdx(idx)] += d;
-                        return s;
+                // count how many numbers are non zero in measureData in the same dimension group
+                const nonZeroData = measureData.reduce(
+                    (acc, d, idx) => {
+                        acc[getIdx(idx)] += d ? 1 : 0;
+                        return acc;
                     },
                     new Array(innerDimensionsLength * outerDimensionsLength).fill(0)
                 );
 
                 // compute the distribution of the measure data for each group
-                const distribution = measureData.map((d, idx) => {
-                    return d / sum[getIdx(idx)];
+                const distribution = measureData.map((_, idx) => {
+                    if (nonZeroData[getIdx(idx)] === 0) return 0;
+                    return 1 / nonZeroData[getIdx(idx)];
                 });
 
                 newCube.storedMeasures[measureId] = this.storedMeasures[measureId].drillUp(
