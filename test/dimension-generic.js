@@ -14,9 +14,9 @@ describe('GenericDimension', function () {
         );
 
         dimension.addAttribute('city', 'cityNumLetters', city => city.length.toString(), {
-            '5': 'five',
-            '6': 'six',
-            '8': 'eigth',
+            5: 'five',
+            6: 'six',
+            8: 'eigth',
         });
 
         dimension.addAttribute(
@@ -142,11 +142,11 @@ describe('GenericDimension', function () {
         assert.deepEqual(result.getGroupItemFromRootItem('country', 'lyon'), 'france');
         assert.deepEqual(result.getGroupItemFromRootItem('country', 'paris'), 'france');
         assert.deepEqual(result.getEntries(), [
-            ['paris', 'city of paris'],
-            ['toulouse', 'city of toulouse'],
-            ['madrid', 'city of madrid'],
             ['beirut', 'city of beirut'],
             ['lyon', 'great city of lyon'],
+            ['madrid', 'city of madrid'],
+            ['paris', 'city of paris'],
+            ['toulouse', 'city of toulouse'],
         ]);
     });
 

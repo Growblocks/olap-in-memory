@@ -38,8 +38,8 @@ describe('Drilling', function () {
 
             before(function () {
                 cube = new Cube([new TimeDimension('time', 'month', '2010-01', '2010-06')]);
-                cube.createStoredMeasure('data_sum');
-                cube.createStoredMeasure('data_avg', { time: 'average' });
+                cube.createStoredMeasure('data_sum', {}, 'float32', NaN);
+                cube.createStoredMeasure('data_avg', { time: 'average' }, 'float32', NaN);
                 cube.hydrateFromSparseNestedObject('data_sum', { '2010-01': 1, '2010-03': 2 });
                 cube.hydrateFromSparseNestedObject('data_avg', { '2010-01': 10, '2010-03': 20 });
 
@@ -134,7 +134,7 @@ describe('Drilling', function () {
 
             before(function () {
                 cube = new Cube([new TimeDimension('time', 'quarter', '2010-Q1', '2010-Q2')]);
-                cube.createStoredMeasure('measure1', { time: 'sum' });
+                cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', NaN);
                 cube.hydrateFromSparseNestedObject('measure1', { '2010-Q1': 90 });
 
                 newCube = cube.drillDown('time', 'month');
