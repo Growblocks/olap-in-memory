@@ -1,12 +1,5 @@
 # Olap in memory
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/7f9625a4d6653520d6f3/maintainability)](https://codeclimate.com/github/romain-gilliotte/olap-in-memory/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/7f9625a4d6653520d6f3/test_coverage)](https://codeclimate.com/github/romain-gilliotte/olap-in-memory/test_coverage)
-![npm bundle size](https://img.shields.io/bundlephobia/minzip/olap-in-memory)
-![NPM](https://img.shields.io/npm/l/olap-in-memory)
-![npm](https://img.shields.io/npm/v/olap-in-memory)
-![npm](https://img.shields.io/npm/dt/olap-in-memory)
-
 Olap in memory is a library to manipulate OLAP cubes without relying on a database doing the heavy lifting.
 
 It support:
@@ -238,7 +231,7 @@ When adding a new measure to a cube, optional parameters can be provided:
 
 -   By dimensions aggregation rule. This will tell the cube which operations need to be applied when drilling-up. Possible values are: `sum`, `average`, `first`, `last`, `highest`, `lowest`, `product`. It defaults to `sum` on all dimensions.
 -   A storage type, which can be `float32`, `float64`, `int32` and `uint32`.
--   A default value which will be used to initialize the cube, and which defaults to `NaN`.
+-   A default value which will be used to initialize the cube, and which defaults to `0`.
 
 ```javascript
 const cube = new Cube([...]);
