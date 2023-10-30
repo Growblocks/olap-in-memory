@@ -14,7 +14,8 @@ describe('Measures', function () {
         });
 
         it('should update only computed measure', function () {
-            const newCube = cube.renameMeasure('router_by_antennas', 'router_by_receivers');
+            const newCube = cube.clone();
+            newCube.renameMeasure('router_by_antennas', 'router_by_receivers');
 
             // all measures still work
             assert.doesNotThrow(() => newCube.getData('routers'));
@@ -26,7 +27,8 @@ describe('Measures', function () {
         });
 
         it('should update formulas of computed measures', function () {
-            const newCube = cube.renameMeasure('antennas', 'receivers');
+            const newCube = cube.clone();
+            newCube.renameMeasure('antennas', 'receivers');
 
             // all measures still work
             assert.doesNotThrow(() => newCube.getData('routers'));
@@ -38,9 +40,9 @@ describe('Measures', function () {
         });
 
         it('should not change anything when renaming twice', function () {
-            const newCube = cube
-                .renameMeasure('antennas', 'receivers')
-                .renameMeasure('receivers', 'antennas');
+            const newCube = cube.clone();
+            cube.renameMeasure('antennas', 'receivers');
+            cube.renameMeasure('receivers', 'antennas');
 
             assert.deepEqual(cube, newCube);
         });

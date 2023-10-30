@@ -115,12 +115,12 @@ describe('Operation between cubes', function () {
         it('should compose cubes with overlapping time dimension', function () {
             const time1 = new TimeDimension('time', 'month', '2010-01', '2010-02');
             const cube1 = new Cube([time1]);
-            cube1.createStoredMeasure('antennas');
+            cube1.createStoredMeasure('antennas', {}, 'float32', NaN);
             cube1.setNestedArray('antennas', [1, 2]);
 
             const time2 = new TimeDimension('time', 'month', '2010-02', '2010-03');
             const cube2 = new Cube([time2]);
-            cube2.createStoredMeasure('routers');
+            cube2.createStoredMeasure('routers', {}, 'float32', NaN);
             cube2.setNestedArray('routers', [3, 2]);
 
             const newCube = cube1.compose(cube2);
@@ -165,7 +165,7 @@ describe('Operation between cubes', function () {
     describe('compose - union', function () {
         it('should compose cubes with the exact same dimensions', function () {
             const period = new GenericDimension('period', 'season', ['summer', 'winter']);
-            const location = new GenericDimension('location', 'city', ['paris', 'toledo', 'tokyo']);
+            const location = new GenericDimension('location', 'city', ['paris', 'tokyo', 'toledo']);
 
             const cube1 = new Cube([location, period]);
             cube1.createStoredMeasure('antennas');
@@ -199,7 +199,7 @@ describe('Operation between cubes', function () {
 
         it('should compose cubes if a dimension is missing from one of the cubes', function () {
             const period = new GenericDimension('period', 'season', ['summer', 'winter']);
-            const location = new GenericDimension('location', 'city', ['paris', 'toledo', 'tokyo']);
+            const location = new GenericDimension('location', 'city', ['paris', 'tokyo', 'toledo']);
 
             const cube1 = new Cube([location, period]);
             cube1.createStoredMeasure('antennas');
@@ -228,7 +228,7 @@ describe('Operation between cubes', function () {
                 'tokyo',
             ]);
             const cube1 = new Cube([location1, period]);
-            cube1.createStoredMeasure('antennas');
+            cube1.createStoredMeasure('antennas', {}, 'float32', NaN);
             cube1.setNestedArray('antennas', [
                 [1, 2],
                 [4, 8],
@@ -237,7 +237,7 @@ describe('Operation between cubes', function () {
 
             const location2 = new GenericDimension('location', 'city', ['soria', 'tokyo', 'paris']);
             const cube2 = new Cube([location2, period]);
-            cube2.createStoredMeasure('routers');
+            cube2.createStoredMeasure('routers', {}, 'float32', NaN);
             cube2.setNestedArray('routers', [
                 [64, 128],
                 [256, 512],
@@ -246,17 +246,24 @@ describe('Operation between cubes', function () {
 
             const newCube = cube1.compose(cube2, true);
             assert.deepEqual(newCube.dimensionIds, ['location', 'period']);
+            assert.deepEqual(newCube.getDimension('location').getItems(), [
+                'paris',
+                'soria',
+                'tokyo',
+                'toledo',
+            ]);
+            assert.deepEqual(newCube.getDimension('period').getItems(), ['summer', 'winter']);
             assert.deepEqual(newCube.getNestedArray('antennas'), [
                 [1, 2],
-                [4, 8],
-                [16, 32],
                 [NaN, NaN],
+                [16, 32],
+                [4, 8],
             ]);
             assert.deepEqual(newCube.getNestedArray('routers'), [
                 [1024, 2048],
-                [NaN, NaN],
-                [256, 512],
                 [64, 128],
+                [256, 512],
+                [NaN, NaN],
             ]);
         });
 
@@ -279,12 +286,12 @@ describe('Operation between cubes', function () {
         it('should compose cubes with overlapping time dimension', function () {
             const time1 = new TimeDimension('time', 'month', '2010-01', '2010-02');
             const cube1 = new Cube([time1]);
-            cube1.createStoredMeasure('antennas');
+            cube1.createStoredMeasure('antennas', {}, 'float32', NaN);
             cube1.setNestedArray('antennas', [1, 2]);
 
             const time2 = new TimeDimension('time', 'month', '2010-02', '2010-03');
             const cube2 = new Cube([time2]);
-            cube2.createStoredMeasure('routers');
+            cube2.createStoredMeasure('routers', {}, 'float32', NaN);
             cube2.setNestedArray('routers', [3, 2]);
 
             const newCube = cube1.compose(cube2, true);
@@ -296,12 +303,12 @@ describe('Operation between cubes', function () {
         it('should work if composing cubes with no overlap in time dimension', function () {
             const time1 = new TimeDimension('time', 'month', '2010-01', '2010-02');
             const cube1 = new Cube([time1]);
-            cube1.createStoredMeasure('antennas');
+            cube1.createStoredMeasure('antennas', {}, 'float32', NaN);
             cube1.setNestedArray('antennas', [1, 2]);
 
             const time2 = new TimeDimension('time', 'month', '2010-03', '2010-04');
             const cube2 = new Cube([time2]);
-            cube2.createStoredMeasure('routers');
+            cube2.createStoredMeasure('routers', {}, 'float32', NaN);
             cube2.setNestedArray('routers', [3, 2]);
 
             const newCube = cube1.compose(cube2, true);
@@ -318,12 +325,12 @@ describe('Operation between cubes', function () {
         it('should compose cubes with overlapping time dimension w/ different root attributes', function () {
             const time1 = new TimeDimension('time', 'month', '2010-01', '2010-04');
             const cube1 = new Cube([time1]);
-            cube1.createStoredMeasure('antennas');
+            cube1.createStoredMeasure('antennas', {}, 'float32', NaN);
             cube1.setNestedArray('antennas', [1, 2, 4, 8]);
 
             const time2 = new TimeDimension('time', 'quarter', '2010-Q1', '2010-Q3');
             const cube2 = new Cube([time2]);
-            cube2.createStoredMeasure('routers');
+            cube2.createStoredMeasure('routers', {}, 'float32', NaN);
             cube2.setNestedArray('routers', [16, 32, 64]);
 
             const newCube = cube1.compose(cube2, true);
