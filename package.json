@@ -20,7 +20,8 @@
         "semantic-release": "^22.0.5"
     },
     "scripts": {
-        "test": "mocha",
+        "test": "mocha --parallel --exclude \"**/*-benchmark.js\"",
+        "test:benchmark": "mocha --parallel --exclude \"!**/*-benchmark.js\"",
         "coverage": "nyc --reporter=lcov npm test"
     }
 }
