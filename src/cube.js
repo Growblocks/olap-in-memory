@@ -228,8 +228,9 @@ class Cube {
             const result = new Array(storeSize);
             const params = {};
             for (let i = 0; i < storeSize; ++i) {
-                for (let j = 0; j < numMeasures; ++j)
+                for (let j = 0; j < numMeasures; ++j) {
                     params[measureIds[j]] = measures[j].getValue(i);
+                }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
             }
@@ -240,12 +241,12 @@ class Cube {
 
     getStatusMap(measureId) {
         if (this.storedMeasures[measureId] !== undefined)
-            return this.storedMeasures[measureId].statusMap;
+            return this.storedMeasures[measureId]._statusMap;
         else if (this.computedMeasures[measureId] !== undefined) {
             const result = new Map();
             for (let storedMeasureId in this.storedMeasures) {
-                const statusMap = this.storedMeasures[storedMeasureId].statusMap;
-                for (let key in statusMap.keys()) result[key] |= statusMap[key];
+                const statusMap = this.storedMeasures[storedMeasureId]._statusMap;
+                for (let key in statusMap.keys()) result[key] |= statusMap.get(key);
             }
             return result;
         } else throw new Error(`getStatusMap: no such measure ${measureId}`);

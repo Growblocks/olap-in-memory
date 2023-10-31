@@ -136,8 +136,8 @@ describe('Accessors', function () {
             const cube = createTestCube(true, true);
             cube.hydrateFromSparseNestedObject('antennas', { toledo: { summer: null } });
 
-            assert.isNaN(cube.getData('antennas')[2]);
-            assert.equal(cube.getStatus('antennas')[2], 1);
+            assert.equal(cube.getData('antennas')[2], 0);
+            assert.equal(cube.getStatusMap('antennas').get(2), undefined);
         });
     });
 });

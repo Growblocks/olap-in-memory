@@ -78,18 +78,20 @@ class InMemoryStore {
         store._type = data.type;
         store._data = data.data;
         store._defaultValue = data.defaultValue;
-        store._statusMap = new Map(data.statusMap);
+        store._statusMap = new Map(data._statusMap);
         return store;
     }
 
     getValue(index) {
-        return this._statusMap[index] ? this._data[index] : this._defaultValue;
+        return this._statusMap.get(index) ? this._data[index] : this._defaultValue;
     }
 
     setValue(index, value) {
-        if (value !== this._defaultValue) {
+        if (value != null && value !== this._defaultValue) {
             this._data[index] = value;
             this._statusMap.set(index, true);
+        } else {
+            this._statusMap.delete(index);
         }
     }
 
@@ -202,9 +204,6 @@ class InMemoryStore {
             return oldDimensions[index].getGroupIndexFromRootIndexMap(newDim.rootAttribute);
         });
 
-        console.log('old data', this._data);
-        console.log('status map: ', this._statusMap);
-
         const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
         const contributions = new Uint16Array(newSize);
 
@@ -212,7 +211,6 @@ class InMemoryStore {
 
         // TODO: consider the contributions of cells which are not in the map and the default value is not NaN or 0
         for (const oldIdx of this._statusMap.keys()) {
-            console.log('oldIdx: ', oldIdx);
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
@@ -249,10 +247,6 @@ class InMemoryStore {
             for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
                 newStore._data[newIdx] /= contributions[newIdx];
         }
-
-        console.log('Result:::::');
-        console.log(newStore._data);
-        console.log(newStore._statusMap);
 
         return newStore;
     }
