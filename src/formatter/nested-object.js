@@ -1,25 +1,14 @@
-function toNestedObjectRec(values, status, dimensions, dimOffset, offset, withMetadata) {
+// TODO: utilize statusMap
+function toNestedObjectRec(values, statusMap, dimensions, dimOffset, offset) {
     if (dimOffset >= dimensions.length) {
-        if (withMetadata) {
-            const cellStatus = status[offset];
-            return { v: values[offset], c: !(cellStatus & 1), r: !(cellStatus & 4) };
-        } else {
-            return values[offset];
-        }
+        return values[offset];
     }
 
     const result = {};
     const items = dimensions[dimOffset].getItems();
     items.forEach((item, itemIndex) => {
         const childOffset = offset * items.length + itemIndex;
-        result[item] = toNestedObjectRec(
-            values,
-            status,
-            dimensions,
-            dimOffset + 1,
-            childOffset,
-            withMetadata
-        );
+        result[item] = toNestedObjectRec(values, statusMap, dimensions, dimOffset + 1, childOffset);
     });
 
     return result;
@@ -46,7 +35,7 @@ module.exports = {
         return value;
     },
 
-    toNestedObject(values, status, dimensions, withMetadata = false) {
-        return toNestedObjectRec(values, status, dimensions, 0, 0, withMetadata);
+    toNestedObject(values, statusMap, dimensions) {
+        return toNestedObjectRec(values, statusMap, dimensions, 0, 0);
     },
 };
