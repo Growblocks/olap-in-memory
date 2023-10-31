@@ -14,8 +14,10 @@ class InMemoryStore {
     }
 
     get data() {
-        const result = new Array(this._data.length);
-        for (let i = 0; i < this._data.length; ++i) result[i] = this.getValue(i);
+        const result = new Array(this._data.length).fill(this._defaultValue);
+        for (let index of this._statusMap.keys()) {
+            result[index] = this._data[index];
+        }
 
         return result;
     }
@@ -58,6 +60,7 @@ class InMemoryStore {
         else throw new Error('Invalid type');
 
         if (!data && !Number.isNaN(defaultValue)) {
+            console.log('here??');
             this._data.fill(defaultValue);
             this._status.fill(STATUS_SET);
         }
@@ -103,7 +106,7 @@ class InMemoryStore {
     }
 
     getValue(index) {
-        return this._status[index] & STATUS_SET ? this._data[index] : NaN;
+        return this._statusMap[index] ? this._data[index] : this._defaultValue;
     }
 
     getStatus(index) {
@@ -114,7 +117,10 @@ class InMemoryStore {
         this._data[index] = value;
         this._status[index] =
             typeof value === 'number' && !Number.isNaN(value) ? status : STATUS_EMPTY;
-        this._statusMap.set(index, this._status[index]);
+
+        if (value !== this._defaultValue) {
+            this._statusMap.set(index, true);
+        }
     }
 
     load(otherStore, myDimensions, hisDimensions) {
@@ -229,6 +235,9 @@ class InMemoryStore {
             return oldDimensions[index].getGroupIndexFromRootIndexMap(newDim.rootAttribute);
         });
 
+        console.log('old data', this._data);
+        console.log('status map: ', this._statusMap);
+
         const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
         const contributions = new Uint16Array(newSize);
 
@@ -236,7 +245,8 @@ class InMemoryStore {
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
-        for (const [oldIdx] in this._statusMap) {
+        for (const oldIdx of this._statusMap.keys()) {
+            console.log('oldIdx: ', oldIdx);
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
@@ -249,33 +259,36 @@ class InMemoryStore {
                 newIdx = newIdx * newDimLength[i] + offset;
             }
 
-            if (this._status[oldIdx] & STATUS_SET) {
-                let oldValue = this._data[oldIdx];
-                if (contributions[newIdx] === 0) newStore._data[newIdx] = oldValue;
-                else {
-                    if (method == 'last') newStore._data[newIdx] = oldValue;
-                    else if (method == 'highest')
-                        newStore._data[newIdx] =
-                            newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx];
-                    else if (method == 'lowest')
-                        newStore._data[newIdx] =
-                            newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue;
-                    else if (method == 'sum' || method == 'average')
-                        newStore._data[newIdx] += oldValue;
-                    else if (method == 'product') newStore._data[newIdx] *= oldValue;
-                }
+            let oldValue = this._data[oldIdx];
 
-                newStore._status[newIdx] |= this._status[oldIdx];
-                newStore._statusMap.set(newIdx, newStore._status[newIdx]);
-                contributions[newIdx] += 1;
-            } else {
-                newStore._status[newIdx] |= STATUS_EMPTY;
+            if (contributions[newIdx] === 0) newStore._data[newIdx] = oldValue;
+            else {
+                if (method == 'last') newStore._data[newIdx] = oldValue;
+                else if (method == 'highest')
+                    newStore._data[newIdx] =
+                        newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx];
+                else if (method == 'lowest')
+                    newStore._data[newIdx] =
+                        newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue;
+                else if (method == 'sum' || method == 'average') newStore._data[newIdx] += oldValue;
+                else if (method == 'product') newStore._data[newIdx] *= oldValue;
             }
+
+            // console.log(newStore._data[newIdx]);
+
+            newStore._status[newIdx] |= this._status[oldIdx];
+            newStore._statusMap.set(newIdx, true);
+            contributions[newIdx] += 1;
         }
 
-        if (method === 'average')
+        if (method === 'average') {
             for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
                 newStore._data[newIdx] /= contributions[newIdx];
+        }
+
+        console.log('Result:::::');
+        console.log(newStore._data);
+        console.log(newStore._statusMap);
 
         return newStore;
     }

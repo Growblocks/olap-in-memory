@@ -747,7 +747,17 @@ class Cube {
 
         const newDimensions = this.dimensions.slice();
         newDimensions[dimIdx] = newDimensions[dimIdx].drillUp(attribute);
-        if (newDimensions[dimIdx] == this.dimensions[dimIdx]) return this;
+        if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
+            console.log(
+                'drillUp: no such attribute: ' +
+                    attribute +
+                    ' in dimension: ' +
+                    dimensionId +
+                    ' in cube: ' +
+                    this.dimensions.map(d => d.id).join(', ')
+            );
+            return this;
+        }
 
         const newCube = new Cube(newDimensions);
         Object.assign(newCube.computedMeasures, this.computedMeasures);
