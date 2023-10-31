@@ -37,7 +37,7 @@ describe('Filtering', function () {
         it('should remove all dimensions', function () {
             const emptyCube = cube.slice('period', 'all', 'all').slice('location', 'all', 'all');
 
-            assert.deepEqual(emptyCube.getNestedArray('antennas'), []);
+            assert.deepEqual(emptyCube.getNestedArray('antennas'), 63);
             assert.equal(emptyCube.dimensions.length, 0);
         });
     });

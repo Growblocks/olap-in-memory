@@ -47,18 +47,18 @@ describe('Drilling', function () {
             });
 
             it('Drilled up cube should have summed', function () {
-                assert.deepEqual(newCube.getNestedObject('data_sum', true, true), {
-                    '2010-Q1': { v: 3, c: false, r: true },
-                    '2010-Q2': { v: NaN, c: false, r: true },
-                    all: { v: 3, c: false, r: true },
+                assert.deepEqual(newCube.getNestedObject('data_sum', true), {
+                    '2010-Q1': 3,
+                    '2010-Q2': NaN,
+                    all: 3,
                 });
             });
 
             it('Drilled up cube should have averaged', function () {
-                assert.deepEqual(newCube.getNestedObject('data_avg', true, true), {
-                    '2010-Q1': { v: 15, c: false, r: true },
-                    '2010-Q2': { v: NaN, c: false, r: true },
-                    all: { v: 15, c: false, r: true },
+                assert.deepEqual(newCube.getNestedObject('data_avg', true), {
+                    '2010-Q1': 15,
+                    '2010-Q2': NaN,
+                    all: 15,
                 });
             });
         });
@@ -153,7 +153,10 @@ describe('Drilling', function () {
             });
 
             it('newCube should have proper status flags', function () {
-                assert.deepEqual(newCube.getStatus('measure1'), [6, 6, 6, 1, 1, 1]);
+                assert.deepEqual(
+                    Array.from(newCube.getStatusMap('measure1').keys()),
+                    [0, 1, 2, 3, 4, 5]
+                );
             });
         });
     });

@@ -240,13 +240,17 @@ class Cube {
     }
 
     getStatusMap(measureId) {
-        if (this.storedMeasures[measureId] !== undefined)
+        if (this.storedMeasures[measureId] !== undefined) {
             return this.storedMeasures[measureId]._statusMap;
-        else if (this.computedMeasures[measureId] !== undefined) {
+        } else if (this.computedMeasures[measureId] !== undefined) {
             const result = new Map();
             for (let storedMeasureId in this.storedMeasures) {
                 const statusMap = this.storedMeasures[storedMeasureId]._statusMap;
-                for (let key in statusMap.keys()) result[key] |= statusMap.get(key);
+                for (let key of statusMap.keys())
+                    result.set(
+                        key,
+                        result.get(key) ? result.get(key) | statusMap.get(key) : statusMap.get(key)
+                    );
             }
             return result;
         } else throw new Error(`getStatusMap: no such measure ${measureId}`);
@@ -293,9 +297,9 @@ class Cube {
         if (!withTotals || this.dimensions.length == 0) {
             return measureIds.reduce((acc, measureId) => {
                 const data = this.getData(measureId);
-                const status = this.getStatus(measureId);
+                const statusMap = this.getStatusMap(measureId);
 
-                acc[measureId] = toNestedObject(data, status, this.dimensions);
+                acc[measureId] = toNestedObject(data, statusMap, this.dimensions);
                 return acc;
             }, {});
         }
