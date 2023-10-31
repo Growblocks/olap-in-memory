@@ -108,6 +108,8 @@ class InMemoryStore {
         });
 
         const hisDimIdx = new Uint32Array(numDimensions);
+        // TODO: optimize this later
+        // for (let hisIdx of otherStore._statusMap.keys()) {
         for (let hisIdx = 0; hisIdx < hisLength; ++hisIdx) {
             // Decompose new index into dimensions indexes
             let hisIdxCpy = hisIdx;
@@ -124,9 +126,8 @@ class InMemoryStore {
             }
 
             this._data[myIdx] = otherStore._data[hisIdx];
+            this._statusMap.set(myIdx, true);
         }
-
-        this._statusMap = otherStore._statusMap;
     }
 
     reorder(oldDimensions, newDimensions) {
