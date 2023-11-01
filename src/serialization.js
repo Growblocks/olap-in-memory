@@ -19,6 +19,7 @@ const STRING = 4;
 const OBJECT = 5;
 const NULL = 6;
 const NUMBER = 7;
+const BOOLEAN = 8;
 
 /**
  * Serialize a mix of ArrayBuffer, TypedArray, Array, String and plain objects into a buffer.
@@ -70,6 +71,10 @@ function toBuffer(obj) {
         result = new ArrayBuffer(8);
         new Uint32Array(result, 0, 1).set([NUMBER]);
         new Float32Array(result, 4, 1).set([obj]);
+    } else if (typeof obj === 'boolean') {
+        result = new ArrayBuffer(8);
+        new Uint32Array(result, 0, 1).set([BOOLEAN]);
+        new Float32Array(result, 4, 1).set([obj ? 1 : 0]);
     } else {
         const payload = toBuffer(Object.entries(obj).map(([key, value]) => [key, toBuffer(value)]));
 
@@ -112,6 +117,8 @@ function fromBuffer(buffer, offset = 0) {
         return null;
     } else if (header === NUMBER) {
         return new Float32Array(buffer, offset + 4, 1)[0];
+    } else if (header === BOOLEAN) {
+        return new Float32Array(buffer, offset + 4, 1)[0] === 1;
     } else if (header === OBJECT) {
         const result = {};
         fromBuffer(buffer, offset + 4).forEach(entry => {

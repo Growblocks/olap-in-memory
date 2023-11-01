@@ -22,12 +22,7 @@ class InMemoryStore {
         if (this._size !== values.length)
             throw new Error(`value length is invalid: ${this._size} !== ${values.length}`);
 
-        for (let i = 0; i < this._size; ++i) {
-            this._data[i] = values[i];
-            values[i] !== this._defaultValue
-                ? this._statusMap.set(i, true)
-                : this._statusMap.delete(i);
-        }
+        for (let i = 0; i < this._size; ++i) this.setValue(i, values[i]);
     }
 
     constructor(
@@ -67,7 +62,8 @@ class InMemoryStore {
             type: this._type,
             data: this._data,
             defaultValue: this._defaultValue,
-            statusMap: Array.from(this._statusMap.entries()),
+            // transform status map in an object
+            statusMap: Object.fromEntries(this._statusMap),
         });
     }
 
@@ -78,7 +74,9 @@ class InMemoryStore {
         store._type = data.type;
         store._data = data.data;
         store._defaultValue = data.defaultValue;
-        store._statusMap = new Map(data._statusMap);
+        store._statusMap = new Map(
+            Object.entries(data.statusMap).map(([k, v]) => [parseInt(k), v])
+        );
         return store;
     }
 
@@ -125,8 +123,7 @@ class InMemoryStore {
                 myIdx = myIdx * myDimLengths[i] + offset;
             }
 
-            this._data[myIdx] = otherStore._data[hisIdx];
-            this._statusMap.set(myIdx, true);
+            this.setValue(myIdx, otherStore._data[hisIdx]);
         }
     }
 
@@ -297,7 +294,7 @@ class InMemoryStore {
 
             const numContributions = contributionsTotal[oldIdx];
             // TODO: optimize this later
-            newStore._statusMap.set(newIdx, true);
+
             if (distributions) {
                 const addedDimLength = newSize / oldSize;
                 const sharedDimSize = distributions.length / addedDimLength;
@@ -307,7 +304,7 @@ class InMemoryStore {
                 if (distributions[distIndex] == null)
                     throw new Error('distribution missing for index ' + distIndex);
 
-                newStore._data[newIdx] = this._data[oldIdx] * distributions[distIndex];
+                newStore.setValue(newIdx, this._data[oldIdx] * distributions[distIndex]);
             } else {
                 if (method === 'sum') {
                     if (useRounding) {
@@ -319,13 +316,15 @@ class InMemoryStore {
                             Math.floor(contributionId * oneOverDistance) ===
                             Math.floor((contributionId - 1) * oneOverDistance);
 
-                        newStore._data[newIdx] = Math.floor(value);
-                        if (!lastIsSame) newStore._data[newIdx]++;
+                        newStore.setValue(newIdx, Math.floor(value));
+                        if (!lastIsSame) {
+                            newStore.setValue(newIdx, ++newStore._data[newIdx]);
+                        }
                     } else {
-                        newStore._data[newIdx] = this._data[oldIdx] / numContributions;
+                        newStore.setValue(newIdx, this._data[oldIdx] / numContributions);
                     }
                 } else {
-                    newStore._data[newIdx] = this._data[oldIdx];
+                    newStore.setValue(newIdx, this._data[oldIdx]);
                 }
             }
 
