@@ -203,7 +203,9 @@ class InMemoryStore {
         });
 
         const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
-        const contributions = new Uint16Array(newSize);
+        const contributions =
+            oldDimLength.reduce((acc, v) => acc * v, 1) /
+            newDimLength.reduce((acc, v) => acc * v, 1);
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
@@ -223,7 +225,7 @@ class InMemoryStore {
 
             let oldValue = this._data[oldIdx];
 
-            if (contributions[newIdx] === 0) newStore._data[newIdx] = oldValue;
+            if (newStore._data[newIdx] === this._defaultValue) newStore._data[newIdx] = oldValue;
             else {
                 if (method == 'last') newStore._data[newIdx] = oldValue;
                 else if (method == 'highest')
@@ -238,12 +240,11 @@ class InMemoryStore {
 
             // TODO: maybe using newStore.setValue() would be faster?
             newStore._statusMap.set(newIdx, true);
-            contributions[newIdx] += 1;
         }
 
         if (method === 'average') {
             for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
-                newStore._data[newIdx] /= contributions[newIdx];
+                newStore._data[newIdx] /= contributions;
         }
 
         return newStore;
