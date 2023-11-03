@@ -224,22 +224,25 @@ class InMemoryStore {
             }
 
             let oldValue = this._data[oldIdx];
-
-            if (newStore._data[newIdx] === this._defaultValue) newStore._data[newIdx] = oldValue;
-            else {
-                if (method == 'last') newStore._data[newIdx] = oldValue;
+            if (isNaN(newStore._data[newIdx]) || newStore._data[newIdx] === this._defaultValue) {
+                newStore.setValue(newIdx, oldValue);
+            } else {
+                if (method == 'last') newStore.setValue(newIdx, oldValue);
                 else if (method == 'highest')
-                    newStore._data[newIdx] =
-                        newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx];
+                    newStore.setValue(
+                        newIdx,
+                        newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx]
+                    );
                 else if (method == 'lowest')
-                    newStore._data[newIdx] =
-                        newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue;
-                else if (method == 'sum' || method == 'average') newStore._data[newIdx] += oldValue;
-                else if (method == 'product') newStore._data[newIdx] *= oldValue;
+                    newStore.setValue(
+                        newIdx,
+                        newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue
+                    );
+                else if (method == 'sum' || method == 'average')
+                    newStore.setValue(newIdx, newStore._data[newIdx] + oldValue);
+                else if (method == 'product')
+                    newStore.setValue(newIdx, newStore._data[newIdx] * oldValue);
             }
-
-            // TODO: maybe using newStore.setValue() would be faster?
-            newStore._statusMap.set(newIdx, true);
         }
 
         if (method === 'average') {
