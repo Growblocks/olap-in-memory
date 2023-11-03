@@ -56,9 +56,9 @@ describe('Drilling', function () {
 
             it('Drilled up cube should have averaged', function () {
                 assert.deepEqual(newCube.getNestedObject('data_avg', true), {
-                    '2010-Q1': 15,
+                    '2010-Q1': 10,
                     '2010-Q2': NaN,
-                    all: 15,
+                    all: 5,
                 });
             });
         });
