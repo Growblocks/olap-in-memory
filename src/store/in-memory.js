@@ -203,10 +203,11 @@ class InMemoryStore {
         });
 
         const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
-        const contributions =
+        const allContributions =
             oldDimLength.reduce((acc, v) => acc * v, 1) /
             newDimLength.reduce((acc, v) => acc * v, 1);
 
+        const contributions = new Uint16Array(newSize);
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
         // TODO: consider the contributions of cells which are not in the map and the default value is not NaN or 0
@@ -222,6 +223,7 @@ class InMemoryStore {
                 let offset = dimIdxOldNewMap[i][oldDimensionIndex[i]];
                 newIdx = newIdx * newDimLength[i] + offset;
             }
+            contributions[newIdx] += 1;
 
             let oldValue = this._data[oldIdx];
             if (isNaN(newStore._data[newIdx]) || newStore._data[newIdx] === this._defaultValue) {
@@ -247,7 +249,12 @@ class InMemoryStore {
 
         if (method === 'average') {
             for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
-                newStore._data[newIdx] /= contributions;
+                newStore.setValue(
+                    newIdx,
+                    (newStore._data[newIdx] +
+                        (allContributions - contributions[newIdx]) * this._defaultValue) /
+                        allContributions
+                );
         }
 
         return newStore;
