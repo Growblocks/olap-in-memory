@@ -16,8 +16,8 @@ module.exports = (createMesures = true, fill = true) => {
     // Create measures
     if (createMesures) {
         cube.createStoredMeasure('antennas', { period: 'sum', location: 'sum' }, 'uint32');
-        // cube.createStoredMeasure('routers', { period: 'sum', location: 'sum' }, 'uint32');
-        // cube.createComputedMeasure('router_by_antennas', 'routers / antennas');
+        cube.createStoredMeasure('routers', { period: 'sum', location: 'sum' }, 'uint32');
+        cube.createComputedMeasure('router_by_antennas', 'routers / antennas');
     }
 
     // Fill
@@ -27,11 +27,11 @@ module.exports = (createMesures = true, fill = true) => {
             [4, 8],
             [16, 32],
         ]);
-        // cube.setNestedArray('routers', [
-        //     [3, 2],
-        //     [4, 9],
-        //     [16, 32],
-        // ]);
+        cube.setNestedArray('routers', [
+            [3, 2],
+            [4, 9],
+            [16, 32],
+        ]);
     }
 
     return cube;

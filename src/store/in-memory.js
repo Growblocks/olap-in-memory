@@ -10,7 +10,6 @@ class InMemoryStore {
     }
 
     get data() {
-        console.log('here', this._data);
         const result = new Array(this._data.length).fill(this._defaultValue);
         for (let index of this._statusMap.keys()) {
             result[index] = this._data[index];
@@ -183,37 +182,10 @@ class InMemoryStore {
             return Array.from({ length: array.length }, (_, i) => i);
         });
 
-        const dimIdxOldNewMap = newDimensions.map((newDim, index) => {
-            return oldDimensions[index].getGroupIndexFromRootIndexMap(newDim.rootAttribute);
-        });
-
-        console.log({ dimIdxOldNewMap, dimIdxNewOldMap, dimIdxMyMap });
-
         // Rewrite data vector.
         const newStore = new InMemoryStore(newLength, this._type, this._defaultValue);
-        // for (let newIdx = 0; newIdx < newLength; ++newIdx) {
-        //     // Decompose new index into dimensions indexes
-        //     let newIdxCpy = newIdx;
-        //     for (let i = numDimensions - 1; i >= 0; --i) {
-        //         newDimIdx[i] = newIdxCpy % newDimLength[i];
-        //         newIdxCpy = Math.floor(newIdxCpy / newDimLength[i]);
-        //     }
-
-        //     // Compute what the old index was
-        //     let oldIdx = 0;
-        //     for (let i = 0; i < numDimensions; ++i) {
-        //         let offset = dimIdxNewOldMap[i][newDimIdx[i]];
-        //         oldIdx = oldIdx * oldDimLength[i] + offset;
-        //     }
-
-        //     newStore.setValue(newIdx, this._data[oldIdx]);
-        // }
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
-
-        console.log('dice before');
-        console.log(this._statusMap);
-        console.log(this._data);
 
         for (let oldIdx of this._statusMap.keys()) {
             let oldIndexCopy = oldIdx;
@@ -222,34 +194,21 @@ class InMemoryStore {
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
 
-                // if (!dimIdxNewOldMap[i].includes(oldDimensionIndex[i])) halt = true;
+                const newDimIdx = dimIdxNewOldMap[i].findIndex(v => v === oldDimensionIndex[i]);
+
+                if (newDimIdx === -1) {
+                    halt = true;
+                    continue;
+                }
+
+                newIdx += dimIdxMyMap[i][newDimIdx] * (newDimLength[i] - 1);
 
                 oldIndexCopy = Math.floor(oldIndexCopy / oldDimLength[i]);
             }
             if (halt) continue;
-            console.log('oldDimensionIndex', oldDimensionIndex);
-            console.log('oldIdx', oldIdx);
-
-            let newIdx = 0;
-            for (let i = 0; i < numDimensions; ++i) {
-                console.log('dimIdxOldNewMap[i]', i, dimIdxOldNewMap[i]);
-                console.log('oldDimensionIndex[i]', i, oldDimensionIndex[i]);
-                let offset = dimIdxOldNewMap[i][oldDimensionIndex[i]];
-                console.log('offset', offset);
-                newIdx = newIdx * newDimLength[i] + offset;
-            }
-
-            console.log('newIdx', oldDimensionIndex);
-
-            if (newIdx > newLength - 1) continue;
 
             newStore.setValue(newIdx, this._data[oldIdx]);
         }
-
-        console.log('dice after');
-        console.log(newStore._size);
-        console.log(newStore._statusMap);
-        console.log(newStore._data);
 
         return newStore;
     }

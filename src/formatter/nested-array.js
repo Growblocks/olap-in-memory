@@ -12,7 +12,6 @@ module.exports = {
     // TODO: utilize statusMap
     toNestedArray(values, statusMap, dimensions) {
         // numDimensions == 0
-        console.log('toNestedArray', values);
 
         if (dimensions.length === 0) {
             return values[0];
