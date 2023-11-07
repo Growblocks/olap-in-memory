@@ -186,11 +186,11 @@ class InMemoryStore {
         const newStore = new InMemoryStore(newLength, this._type, this._defaultValue);
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
+        let newDimensionIndex = new Uint32Array(numDimensions);
 
         for (let oldIdx of this._statusMap.keys()) {
             let oldIndexCopy = oldIdx;
             let halt = false;
-            let newIdx = 0;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
 
@@ -201,11 +201,17 @@ class InMemoryStore {
                     continue;
                 }
 
-                newIdx += dimIdxMyMap[i][newDimIdx] * (newDimLength[i] - 1);
+                newDimensionIndex[i] = dimIdxMyMap[i][newDimIdx];
 
                 oldIndexCopy = Math.floor(oldIndexCopy / oldDimLength[i]);
             }
             if (halt) continue;
+
+            let newIdx = 0;
+            for (let i = 0; i < numDimensions; ++i) {
+                let offset = newDimensionIndex[i];
+                newIdx = newIdx * newDimLength[i] + offset;
+            }
 
             newStore.setValue(newIdx, this._data[oldIdx]);
         }
