@@ -256,6 +256,12 @@ class Cube {
         } else throw new Error(`getStatusMap: no such measure ${measureId}`);
     }
 
+    fillData(measureId, value) {
+        if (this.storedMeasures[measureId]) {
+            this.storedMeasures[measureId].full(value);
+        } else throw new Error(`fillData can only be called on stored measures: ${measureId}`);
+    }
+
     setData(measureId, values) {
         if (this.storedMeasures[measureId]) {
             this.storedMeasures[measureId].data = values;

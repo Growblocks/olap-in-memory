@@ -97,6 +97,7 @@ declare module '@growblocks/olap-in-memory' {
         reorderDimensions(dimensionIds: string[]): Cube;
         serialize(): ArrayBuffer;
         serializeToBase64String(): string;
+        fillData(measure: string, data: number): void;
         setData(measure: string, data: number[]): void;
         setNestedArray(measure: string, data: NestedNumberArray): void;
         setNestedObject(measure: string, obj: NestedNumberObject): void;

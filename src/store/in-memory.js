@@ -99,6 +99,10 @@ class InMemoryStore {
         }
     }
 
+    fill(value) {
+        for (let i = 0; i < this._size; ++i) this.setValue(i, value);
+    }
+
     load(otherStore, myDimensions, hisDimensions) {
         const hisLength = otherStore._size;
         const numDimensions = myDimensions.length;
