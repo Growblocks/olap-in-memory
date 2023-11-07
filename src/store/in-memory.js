@@ -34,6 +34,8 @@ class InMemoryStore {
     ) {
         this._size = size;
         this._type = type;
+        if (!isNaN(defaultValue) && defaultValue !== 0)
+            throw new Error('Invalid default value, only NaN and 0 are supported');
         this._defaultValue = defaultValue;
         this._statusMap = typeof statusMap === 'undefined' ? new Map() : statusMap;
 
@@ -85,7 +87,11 @@ class InMemoryStore {
     }
 
     setValue(index, value) {
-        if (value != null && value !== this._defaultValue) {
+        if (
+            value !== null &&
+            value !== this._defaultValue &&
+            !(Number.isNaN(this._defaultValue) && Number.isNaN(value))
+        ) {
             this._data[index] = value;
             this._statusMap.set(index, true);
         } else {
@@ -203,14 +209,10 @@ class InMemoryStore {
         });
 
         const newStore = new InMemoryStore(newSize, this._type, this._defaultValue);
-        const allContributions =
-            oldDimLength.reduce((acc, v) => acc * v, 1) /
-            newDimLength.reduce((acc, v) => acc * v, 1);
 
         const contributions = new Uint16Array(newSize);
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
-        // TODO: consider the contributions of cells which are not in the map and the default value is not NaN or 0
         for (const oldIdx of this._statusMap.keys()) {
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -223,7 +225,6 @@ class InMemoryStore {
                 let offset = dimIdxOldNewMap[i][oldDimensionIndex[i]];
                 newIdx = newIdx * newDimLength[i] + offset;
             }
-            contributions[newIdx] += 1;
 
             let oldValue = this._data[oldIdx];
             if (isNaN(newStore._data[newIdx]) || newStore._data[newIdx] === this._defaultValue) {
@@ -245,16 +246,12 @@ class InMemoryStore {
                 else if (method == 'product')
                     newStore.setValue(newIdx, newStore._data[newIdx] * oldValue);
             }
+            contributions[newIdx] += 1;
         }
 
         if (method === 'average') {
             for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
-                newStore.setValue(
-                    newIdx,
-                    (newStore._data[newIdx] +
-                        (allContributions - contributions[newIdx]) * this._defaultValue) /
-                        allContributions
-                );
+                newStore.setValue(newIdx, newStore._data[newIdx] / contributions[newIdx]);
         }
 
         return newStore;
