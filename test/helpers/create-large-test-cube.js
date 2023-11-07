@@ -4,8 +4,8 @@ module.exports = (
     numOfDimensions,
     dimensionSize,
     numOfMeasures,
-    defaultMeasureValue = 1,
-    sparseDataRate
+    defaultMeasureValue = 0,
+    sparseDataRate = 1.0
 ) => {
     const dimensions = [];
 
