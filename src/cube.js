@@ -258,7 +258,7 @@ class Cube {
 
     fillData(measureId, value) {
         if (this.storedMeasures[measureId]) {
-            this.storedMeasures[measureId].full(value);
+            this.storedMeasures[measureId].fill(value);
         } else throw new Error(`fillData can only be called on stored measures: ${measureId}`);
     }
 
