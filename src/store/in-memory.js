@@ -167,22 +167,18 @@ class InMemoryStore {
     }
 
     dice(oldDimensions, newDimensions) {
-        // Cache
         const newLength = newDimensions.reduce((m, d) => m * d.numItems, 1);
         const numDimensions = newDimensions.length;
         const oldDimLength = oldDimensions.map(dim => dim.numItems);
         const newDimLength = newDimensions.map(dim => dim.numItems);
+
         const dimIdxNewOldMap = newDimensions.map((dimension, index) => {
             const newItems = dimension.getItems();
             const oldItemsToIdx = oldDimensions[index].getItemsToIdx();
 
             return newItems.map(newItem => oldItemsToIdx[newItem]);
         });
-        const dimIdxMyMap = dimIdxNewOldMap.map(array => {
-            return Array.from({ length: array.length }, (_, i) => i);
-        });
 
-        // Rewrite data vector.
         const newStore = new InMemoryStore(newLength, this._type, this._defaultValue);
 
         let oldDimensionIndex = new Uint32Array(numDimensions);
@@ -194,14 +190,14 @@ class InMemoryStore {
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
 
-                const newDimIdx = dimIdxNewOldMap[i].findIndex(v => v === oldDimensionIndex[i]);
+                const newDimIdx = dimIdxNewOldMap[i].indexOf(oldDimensionIndex[i]);
 
                 if (newDimIdx === -1) {
                     halt = true;
-                    continue;
+                    break;
                 }
 
-                newDimensionIndex[i] = dimIdxMyMap[i][newDimIdx];
+                newDimensionIndex[i] = newDimIdx;
 
                 oldIndexCopy = Math.floor(oldIndexCopy / oldDimLength[i]);
             }
@@ -209,8 +205,7 @@ class InMemoryStore {
 
             let newIdx = 0;
             for (let i = 0; i < numDimensions; ++i) {
-                let offset = newDimensionIndex[i];
-                newIdx = newIdx * newDimLength[i] + offset;
+                newIdx = newIdx * newDimLength[i] + newDimensionIndex[i];
             }
 
             newStore.setValue(newIdx, this._data[oldIdx]);
