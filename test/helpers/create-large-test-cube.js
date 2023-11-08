@@ -1,12 +1,6 @@
 const { Cube, GenericDimension } = require('../../src');
 
-module.exports = (
-    numOfDimensions,
-    dimensionSize,
-    numOfMeasures,
-    defaultMeasureValue = 0,
-    sparseDataRate = 1.0
-) => {
+module.exports = (numOfDimensions, dimensionSize, numOfMeasures, sparseDataRate = 1.0) => {
     const dimensions = [];
 
     for (let i = 0; i < numOfDimensions; i++) {
@@ -21,7 +15,7 @@ module.exports = (
     const cube = new Cube(dimensions);
 
     for (let i = 0; i < numOfMeasures; i++) {
-        cube.createStoredMeasure(`measure${i}`, {}, 'float32', defaultMeasureValue);
+        cube.createStoredMeasure(`measure${i}`, {}, 'float32', 0);
     }
 
     const sizeToFillDataRandomly = sparseDataRate * cube.storeSize;
