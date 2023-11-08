@@ -104,7 +104,6 @@ class InMemoryStore {
     }
 
     load(otherStore, myDimensions, hisDimensions) {
-        const hisLength = otherStore._size;
         const numDimensions = myDimensions.length;
         const hisDimLengths = hisDimensions.map(dim => dim.numItems);
         const myDimLengths = myDimensions.map(dim => dim.numItems);
@@ -116,9 +115,7 @@ class InMemoryStore {
         });
 
         const hisDimIdx = new Uint32Array(numDimensions);
-        // TODO: optimize this later
-        // for (let hisIdx of otherStore._statusMap.keys()) {
-        for (let hisIdx = 0; hisIdx < hisLength; ++hisIdx) {
+        for (const hisIdx of otherStore._statusMap.keys()) {
             // Decompose new index into dimensions indexes
             let hisIdxCpy = hisIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
