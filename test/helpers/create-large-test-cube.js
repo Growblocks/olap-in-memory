@@ -1,6 +1,12 @@
 const { Cube, GenericDimension } = require('../../src');
 
-module.exports = (numOfDimensions, dimensionSize, numOfMeasures, sparseDataRate = 1.0) => {
+module.exports = (
+    numOfDimensions,
+    dimensionSize,
+    numOfMeasures,
+    sparseDataRate = 1.0,
+    firstMeasureIndex = 0
+) => {
     const dimensions = [];
 
     for (let i = 0; i < numOfDimensions; i++) {
@@ -14,7 +20,7 @@ module.exports = (numOfDimensions, dimensionSize, numOfMeasures, sparseDataRate 
 
     const cube = new Cube(dimensions);
 
-    for (let i = 0; i < numOfMeasures; i++) {
+    for (let i = firstMeasureIndex; i < firstMeasureIndex + numOfMeasures; i++) {
         cube.createStoredMeasure(`measure${i}`, {}, 'float32', 0);
     }
 

@@ -1,4 +1,5 @@
-const assert = require('chai').assert;
+// const assert = require('chai').assert;
+const { GenericDimension } = require('../src');
 const createLargeTestCube = require('./helpers/create-large-test-cube');
 
 function batchRun(func, times = 10) {
@@ -23,7 +24,7 @@ describe('Cube benchmark', function () {
     // 120,000 * 0.1 = 12,000 cells -> 4 * 12,000 = 48,000 bytes = 48KB
     const sparseLargeCube50 = createLargeTestCube(10, 4, 3, 0.5);
     const sparseLargeCube25 = createLargeTestCube(10, 4, 3, 0.25);
-    const sparseLargeCube10 = createLargeTestCube(10, 4, 3, 0.1);
+    const sparseLargeCube10 = createLargeTestCube(10, 4, 3, 0.1, 3);
     const testCubes = [largeCube, sparseLargeCube50, sparseLargeCube25, sparseLargeCube10];
 
     describe('slice of large cubes', function () {
@@ -50,6 +51,58 @@ describe('Cube benchmark', function () {
                 const avgTime = batchRun(() => cube.collapse());
                 console.log(`Time taken for collapse: ${avgTime}ms`);
             }
+        });
+    });
+
+    describe('reorder of large cubes', function () {
+        it('test time taken for reordering a large cube', function () {
+            for (const cube of testCubes) {
+                const reorderedDimensions = cube.dimensionIds.slice().reverse();
+                const avgTime = batchRun(() => cube.reorderDimensions(reorderedDimensions));
+                console.log(`Time taken for reordering: ${avgTime}ms`);
+            }
+        });
+    });
+
+    describe('dice of large cubes', function () {
+        it('test time taken for dice a large cube', function () {
+            for (const cube of testCubes) {
+                const avgTime = batchRun(() =>
+                    cube.dice('dimension2', 'root', ['dimension2-item2', 'dimension2-item3'])
+                );
+                console.log(`Time taken for dice: ${avgTime}ms`);
+            }
+        });
+    });
+
+    describe('add dimension to large cubes', function () {
+        it('test time taken for adding new dimension to a large cube', function () {
+            const newDimension = new GenericDimension(
+                `dimension-new`,
+                'root',
+                Array.from({ length: 5 }, (_, j) => `dimension-new-item${j}`)
+            );
+
+            for (const cube of testCubes) {
+                const avgTime = batchRun(() => cube.addDimension(newDimension));
+                console.log(`Time taken for adding new dimension: ${avgTime}ms`);
+            }
+        });
+    });
+
+    describe('remove dimension to large cubes', function () {
+        it('test time taken for removing a dimension from a large cube', function () {
+            for (const cube of testCubes) {
+                const avgTime = batchRun(() => cube.removeDimension('dimension4'));
+                console.log(`Time taken for removing a dimension: ${avgTime}ms`);
+            }
+        });
+    });
+
+    describe('compose of large cubes', function () {
+        it('test time taken for composing two large cube', function () {
+            const avgTime = batchRun(() => sparseLargeCube10.compose(sparseLargeCube50));
+            console.log(`Time taken for composing two large cubes: ${avgTime}ms`);
         });
     });
 });
