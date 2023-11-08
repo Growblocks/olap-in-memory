@@ -241,15 +241,15 @@ class Cube {
 
     getStatusMap(measureId) {
         if (this.storedMeasures[measureId] !== undefined) {
-            return this.storedMeasures[measureId]._statusMap;
+            return this.storedMeasures[measureId]._dataMap;
         } else if (this.computedMeasures[measureId] !== undefined) {
             const result = new Map();
             for (let storedMeasureId in this.storedMeasures) {
-                const statusMap = this.storedMeasures[storedMeasureId]._statusMap;
-                for (let key of statusMap.keys())
+                const dataMap = this.storedMeasures[storedMeasureId]._dataMap;
+                for (let key of dataMap.keys())
                     result.set(
                         key,
-                        result.get(key) ? result.get(key) | statusMap.get(key) : statusMap.get(key)
+                        result.get(key) ? result.get(key) | dataMap.get(key) : dataMap.get(key)
                     );
             }
             return result;

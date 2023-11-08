@@ -6,13 +6,15 @@ const { toBuffer, fromBuffer } = require('../serialization');
  */
 class InMemoryStore {
     get byteLength() {
-        return this._data.byteLength;
+        if (this._type == 'int32' || this._type == 'uint32' || this._type == 'float32')
+            return this._size * 4;
+        else if (this._type == 'float64') return this._size * 8;
     }
 
     get data() {
-        const result = new Array(this._data.length).fill(this._defaultValue);
-        for (let index of this._statusMap.keys()) {
-            result[index] = this._data[index];
+        const result = new Array(this._size).fill(this._defaultValue);
+        for (const [index, value] of this._dataMap.entries()) {
+            result[index] = value;
         }
 
         return result;
@@ -25,47 +27,29 @@ class InMemoryStore {
         for (let i = 0; i < this._size; ++i) this.setValue(i, values[i]);
     }
 
-    constructor(
-        size,
-        type = 'float32',
-        defaultValue = NaN,
-        data = undefined,
-        statusMap = undefined
-    ) {
+    constructor(size, type = 'float32', defaultValue = NaN, dataMap = undefined) {
         this._size = size;
         this._type = type;
         if (!isNaN(defaultValue) && defaultValue !== 0)
             throw new Error('Invalid default value, only NaN and 0 are supported');
+
+        if (!['int32', 'uint32', 'float32', 'float64'].includes(type))
+            throw new Error('Invalid type');
+
         this._defaultValue = defaultValue;
-        this._statusMap = typeof statusMap === 'undefined' ? new Map() : statusMap;
-
-        if (type == 'int32') this._data = new Int32Array(size);
-        else if (type == 'uint32') this._data = new Uint32Array(size);
-        else if (type == 'float32') this._data = new Float32Array(size);
-        else if (type == 'float64') this._data = new Float64Array(size);
-        else throw new Error('Invalid type');
-
-        data ? (this._data = data.slice()) : this._data.fill(defaultValue);
+        this._dataMap = typeof dataMap === 'undefined' ? new Map() : dataMap;
     }
 
     clone() {
-        return new InMemoryStore(
-            this._size,
-            this._type,
-            this._defaultValue,
-            this._data,
-            this._statusMap
-        );
+        return new InMemoryStore(this._size, this._type, this._defaultValue, this._dataMap);
     }
 
     serialize() {
         return toBuffer({
             size: this._size,
             type: this._type,
-            data: this._data,
             defaultValue: this._defaultValue,
-            // transform status map in an object
-            statusMap: Object.fromEntries(this._statusMap),
+            dataMap: Object.fromEntries(this._dataMap),
         });
     }
 
@@ -74,28 +58,25 @@ class InMemoryStore {
         const store = new InMemoryStore(0);
         store._size = data.size;
         store._type = data.type;
-        store._data = data.data;
         store._defaultValue = data.defaultValue;
-        store._statusMap = new Map(
-            Object.entries(data.statusMap).map(([k, v]) => [parseInt(k), v])
-        );
+        store._dataMap = new Map(Object.entries(data.dataMap).map(([k, v]) => [parseInt(k), v]));
         return store;
     }
 
     getValue(index) {
-        return this._statusMap.get(index) ? this._data[index] : this._defaultValue;
+        return this._dataMap.get(index) || this._defaultValue;
     }
 
     setValue(index, value) {
         if (
+            value !== undefined &&
             value !== null &&
             value !== this._defaultValue &&
             !(Number.isNaN(this._defaultValue) && Number.isNaN(value))
         ) {
-            this._data[index] = value;
-            this._statusMap.set(index, true);
+            this._dataMap.set(index, value);
         } else {
-            this._statusMap.delete(index);
+            this._dataMap.delete(index);
         }
     }
 
@@ -115,7 +96,7 @@ class InMemoryStore {
         });
 
         const hisDimIdx = new Uint32Array(numDimensions);
-        for (const hisIdx of otherStore._statusMap.keys()) {
+        for (const [hisIdx, hisValue] of otherStore._dataMap.entries()) {
             // Decompose new index into dimensions indexes
             let hisIdxCpy = hisIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -130,7 +111,7 @@ class InMemoryStore {
                 myIdx = myIdx * myDimLengths[i] + offset;
             }
 
-            this.setValue(myIdx, otherStore._data[hisIdx]);
+            this.setValue(myIdx, hisValue);
         }
     }
 
@@ -142,7 +123,7 @@ class InMemoryStore {
 
         const oldDimIdx = new Uint32Array(numDimensions);
 
-        for (let oldIdx of this._statusMap.keys()) {
+        for (const [oldIdx, oldValue] of this._dataMap.entries()) {
             // Decompose new index into dimensions indexes
             let oldIdxCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -157,7 +138,7 @@ class InMemoryStore {
                 newIdx = newIdx * newDimensions[i].numItems + oldDimIdx[oldDimIndex];
             }
 
-            newStore.setValue(newIdx, this._data[oldIdx]);
+            newStore.setValue(newIdx, oldValue);
         }
 
         return newStore;
@@ -181,7 +162,7 @@ class InMemoryStore {
         let oldDimensionIndex = new Uint32Array(numDimensions);
         let newDimensionIndex = new Uint32Array(numDimensions);
 
-        for (let oldIdx of this._statusMap.keys()) {
+        for (const [oldIdx, oldValue] of this._dataMap.entries()) {
             let oldIndexCopy = oldIdx;
             let halt = false;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -205,7 +186,7 @@ class InMemoryStore {
                 newIdx = newIdx * newDimLength[i] + newDimensionIndex[i];
             }
 
-            newStore.setValue(newIdx, this._data[oldIdx]);
+            newStore.setValue(newIdx, oldValue);
         }
 
         return newStore;
@@ -225,7 +206,7 @@ class InMemoryStore {
         const contributions = new Uint16Array(newSize);
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
-        for (const oldIdx of this._statusMap.keys()) {
+        for (const [oldIdx, oldValue] of this._dataMap.entries()) {
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
@@ -238,32 +219,28 @@ class InMemoryStore {
                 newIdx = newIdx * newDimLength[i] + offset;
             }
 
-            let oldValue = this._data[oldIdx];
-            if (isNaN(newStore._data[newIdx]) || newStore._data[newIdx] === this._defaultValue) {
+            const newValue = newStore.getValue(newIdx);
+
+            if (isNaN(newValue) || newValue === this._defaultValue) {
                 newStore.setValue(newIdx, oldValue);
             } else {
                 if (method == 'last') newStore.setValue(newIdx, oldValue);
                 else if (method == 'highest')
-                    newStore.setValue(
-                        newIdx,
-                        newStore._data[newIdx] < oldValue ? oldValue : newStore._data[newIdx]
-                    );
+                    newStore.setValue(newIdx, newValue < oldValue ? oldValue : newValue);
                 else if (method == 'lowest')
-                    newStore.setValue(
-                        newIdx,
-                        newStore._data[newIdx] < oldValue ? newStore._data[newIdx] : oldValue
-                    );
+                    newStore.setValue(newIdx, newValue < oldValue ? newValue : oldValue);
                 else if (method == 'sum' || method == 'average')
-                    newStore.setValue(newIdx, newStore._data[newIdx] + oldValue);
-                else if (method == 'product')
-                    newStore.setValue(newIdx, newStore._data[newIdx] * oldValue);
+                    newStore.setValue(newIdx, newValue + oldValue);
+                else if (method == 'product') newStore.setValue(newIdx, newValue * oldValue);
             }
             contributions[newIdx] += 1;
         }
 
         if (method === 'average') {
-            for (let newIdx = 0; newIdx < newStore._data.length; ++newIdx)
-                newStore.setValue(newIdx, newStore._data[newIdx] / contributions[newIdx]);
+            for (let newIdx = 0; newIdx < newStore._size; ++newIdx) {
+                if (contributions[newIdx])
+                    newStore.setValue(newIdx, newStore.getValue(newIdx) / contributions[newIdx]);
+            }
         }
 
         return newStore;
@@ -311,6 +288,7 @@ class InMemoryStore {
 
         for (let newIdx = 0; newIdx < newSize; ++newIdx) {
             const oldIdx = idxNewOld[newIdx];
+            const oldValue = this.getValue(oldIdx);
 
             const numContributions = contributionsTotal[oldIdx];
             // TODO: optimize this later
@@ -324,12 +302,12 @@ class InMemoryStore {
                 if (distributions[distIndex] == null)
                     throw new Error('distribution missing for index ' + distIndex);
 
-                newStore.setValue(newIdx, this._data[oldIdx] * distributions[distIndex]);
+                newStore.setValue(newIdx, oldValue * distributions[distIndex]);
             } else {
                 if (method === 'sum') {
                     if (useRounding) {
-                        const value = Math.floor(this._data[oldIdx] / numContributions);
-                        const remainder = this._data[oldIdx] % numContributions;
+                        const value = Math.floor(oldValue / numContributions);
+                        const remainder = oldValue % numContributions;
                         const contributionId = contributionsIds[oldIdx];
                         const oneOverDistance = remainder / numContributions;
                         const lastIsSame =
@@ -338,13 +316,14 @@ class InMemoryStore {
 
                         newStore.setValue(newIdx, Math.floor(value));
                         if (!lastIsSame) {
-                            newStore.setValue(newIdx, ++newStore._data[newIdx]);
+                            const newValue = newStore.getValue(newIdx);
+                            newStore.setValue(newIdx, newValue + 1);
                         }
                     } else {
-                        newStore.setValue(newIdx, this._data[oldIdx] / numContributions);
+                        newStore.setValue(newIdx, oldValue / numContributions);
                     }
                 } else {
-                    newStore.setValue(newIdx, this._data[oldIdx]);
+                    newStore.setValue(newIdx, oldValue);
                 }
             }
 
