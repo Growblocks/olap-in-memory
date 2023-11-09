@@ -6,9 +6,13 @@ const { toBuffer, fromBuffer } = require('../serialization');
  */
 class InMemoryStore {
     get byteLength() {
-        if (this._type == 'int32' || this._type == 'uint32' || this._type == 'float32')
-            return this._size * 4;
-        else if (this._type == 'float64') return this._size * 8;
+        const typeToSize = {
+            int32: 4,
+            uint32: 4,
+            float32: 4,
+            float64: 8,
+        };
+        return this._size * (typeToSize[this._type] || 1);
     }
 
     get data() {
