@@ -41,7 +41,7 @@ class InMemoryStore {
             throw new Error('Invalid type');
 
         this._defaultValue = defaultValue;
-        this._dataMap = typeof dataMap === 'undefined' ? new Map() : dataMap;
+        this._dataMap = new Map(dataMap);
     }
 
     clone() {
@@ -49,11 +49,30 @@ class InMemoryStore {
     }
 
     serialize() {
+        let dataBuffer;
+        switch (this._type) {
+            case 'int32':
+                dataBuffer = new Int32Array(this._dataMap.values());
+                break;
+            case 'uint32':
+                dataBuffer = new Uint32Array(this._dataMap.values());
+                break;
+            case 'float32':
+                dataBuffer = new Float32Array(this._dataMap.values());
+                break;
+            case 'float64':
+                dataBuffer = new Float64Array(this._dataMap.values());
+                break;
+            default:
+                dataBuffer = Array.from(this._dataMap.values());
+        }
+
         return toBuffer({
             size: this._size,
             type: this._type,
             defaultValue: this._defaultValue,
-            dataMap: Object.fromEntries(this._dataMap),
+            indexes: new Uint32Array(this._dataMap.keys()),
+            dataBuffer: dataBuffer,
         });
     }
 
@@ -63,12 +82,17 @@ class InMemoryStore {
         store._size = data.size;
         store._type = data.type;
         store._defaultValue = data.defaultValue;
-        store._dataMap = new Map(Object.entries(data.dataMap).map(([k, v]) => [parseInt(k), v]));
+        store._dataMap = new Map(
+            data.indexes.reduce((acc, v, i) => {
+                acc.push([v, data.dataBuffer[i]]);
+                return acc;
+            }, [])
+        );
         return store;
     }
 
     getValue(index) {
-        return this._dataMap.get(index) || this._defaultValue;
+        return this._dataMap.get(index) ?? this._defaultValue;
     }
 
     setValue(index, value) {
