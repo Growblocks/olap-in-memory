@@ -122,6 +122,62 @@ describe('Dimension', function () {
         it('should last cities', function () {
             assert.deepEqual(cube.getNestedArray('antennas_last'), [16, 32]);
         });
+
+        it('should be able to remove a dimension without any values in it', function () {
+            const newDimension = new GenericDimension('location', 'root', [
+                'paris',
+                'madrid',
+                'berlin',
+            ]);
+            const cube = new Cube([
+                newDimension,
+                new TimeDimension('time', 'month', '2010-01', '2010-02'),
+            ]);
+
+            cube.createStoredMeasure('measure1', {}, 'float32', 0);
+
+            assert.deepEqual(cube.getNestedObject('measure1'), {
+                paris: { '2010-01': 0, '2010-02': 0 },
+                madrid: { '2010-01': 0, '2010-02': 0 },
+                berlin: { '2010-01': 0, '2010-02': 0 },
+            });
+
+            assert.deepEqual(cube.removeDimension('location').getNestedObject('measure1'), {
+                '2010-01': 0,
+                '2010-02': 0,
+            });
+        });
+
+        it('should be able to remove a dimension with some values in it', function () {
+            const newDimension = new GenericDimension('location', 'root', [
+                'paris',
+                'madrid',
+                'berlin',
+            ]);
+            const cube = new Cube([
+                newDimension,
+                new TimeDimension('time', 'month', '2010-01', '2010-02'),
+            ]);
+
+            cube.createStoredMeasure('measure1', {}, 'float32', 0);
+
+            cube.hydrateFromSparseNestedObject('measure1', {
+                paris: { '2010-01': 10, '2010-02': 0 },
+                madrid: { '2010-01': 0, '2010-02': 5 },
+                berlin: { '2010-01': 0, '2010-02': 10 },
+            });
+
+            assert.deepEqual(cube.getNestedObject('measure1'), {
+                paris: { '2010-01': 10, '2010-02': 0 },
+                madrid: { '2010-01': 0, '2010-02': 5 },
+                berlin: { '2010-01': 0, '2010-02': 10 },
+            });
+
+            assert.deepEqual(cube.removeDimension('location').getNestedObject('measure1'), {
+                '2010-01': 10,
+                '2010-02': 15,
+            });
+        });
     });
 
     describe('reorderDimensions', function () {
