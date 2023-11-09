@@ -33,6 +33,13 @@ describe('Filtering', function () {
             assert.deepEqual(tolWinCube.getNestedArray('antennas'), 8);
             assert.equal(tolWinCube.dimensions.length, 0);
         });
+
+        it('should remove all dimensions', function () {
+            const emptyCube = cube.slice('period', 'all', 'all').slice('location', 'all', 'all');
+
+            assert.deepEqual(emptyCube.getNestedArray('antennas'), 63);
+            assert.equal(emptyCube.dimensions.length, 0);
+        });
     });
 
     describe('dice', function () {

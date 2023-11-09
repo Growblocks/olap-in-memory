@@ -9,8 +9,10 @@ module.exports = {
         return values;
     },
 
-    toNestedArray(values, status, dimensions) {
+    // TODO: utilize statusMap
+    toNestedArray(values, statusMap, dimensions) {
         // numDimensions == 0
+
         if (dimensions.length === 0) {
             return values[0];
         }

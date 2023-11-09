@@ -228,8 +228,9 @@ class Cube {
             const result = new Array(storeSize);
             const params = {};
             for (let i = 0; i < storeSize; ++i) {
-                for (let j = 0; j < numMeasures; ++j)
+                for (let j = 0; j < numMeasures; ++j) {
                     params[measureIds[j]] = measures[j].getValue(i);
+                }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
             }
@@ -238,18 +239,27 @@ class Cube {
         } else throw new Error(`getData: no such measure ${measureId}`);
     }
 
-    getStatus(measureId) {
-        if (this.storedMeasures[measureId] !== undefined)
-            return this.storedMeasures[measureId].status;
-        else if (this.computedMeasures[measureId] !== undefined) {
-            const result = new Array(this.storeSize);
-            result.fill(0);
+    getStatusMap(measureId) {
+        if (this.storedMeasures[measureId] !== undefined) {
+            return this.storedMeasures[measureId]._dataMap;
+        } else if (this.computedMeasures[measureId] !== undefined) {
+            const result = new Map();
             for (let storedMeasureId in this.storedMeasures) {
-                const status = this.storedMeasures[storedMeasureId].status;
-                for (let i = 0; i < this.storeSize; ++i) result[i] |= status[i];
+                const dataMap = this.storedMeasures[storedMeasureId]._dataMap;
+                for (let key of dataMap.keys())
+                    result.set(
+                        key,
+                        result.get(key) ? result.get(key) | dataMap.get(key) : dataMap.get(key)
+                    );
             }
             return result;
-        } else throw new Error(`getStatus: no such measure ${measureId}`);
+        } else throw new Error(`getStatusMap: no such measure ${measureId}`);
+    }
+
+    fillData(measureId, value) {
+        if (this.storedMeasures[measureId]) {
+            this.storedMeasures[measureId].fill(value);
+        } else throw new Error(`fillData can only be called on stored measures: ${measureId}`);
     }
 
     setData(measureId, values) {
@@ -260,9 +270,9 @@ class Cube {
 
     getNestedArray(measureId) {
         const data = this.getData(measureId);
-        const status = this.getStatus(measureId);
+        const statusMap = this.getStatusMap(measureId);
 
-        return toNestedArray(data, status, this.dimensions);
+        return toNestedArray(data, statusMap, this.dimensions);
     }
 
     setNestedArray(measureId, values) {
@@ -270,11 +280,11 @@ class Cube {
         this.setData(measureId, data);
     }
 
-    getNestedObject(measureId, withTotals = false, withMetadata = false) {
+    getNestedObject(measureId, withTotals = false) {
         if (!withTotals || this.dimensions.length == 0) {
             const data = this.getData(measureId);
-            const status = this.getStatus(measureId);
-            return toNestedObject(data, status, this.dimensions, withMetadata);
+            const statusMap = this.getStatusMap(measureId);
+            return toNestedObject(data, statusMap, this.dimensions);
         }
 
         const result = {};
@@ -283,19 +293,19 @@ class Cube {
             for (let i = 0; i < this.dimensions.length; ++i)
                 if (j & (1 << i)) subCube = subCube.drillUp(this.dimensions[i].id, 'all');
 
-            merge(result, subCube.getNestedObject(measureId, false, withMetadata));
+            merge(result, subCube.getNestedObject(measureId, false));
         }
 
         return result;
     }
 
-    getNestedObjects(measureIds, withTotals = false, withMetadata = false) {
+    getNestedObjects(measureIds, withTotals = false) {
         if (!withTotals || this.dimensions.length == 0) {
             return measureIds.reduce((acc, measureId) => {
                 const data = this.getData(measureId);
-                const status = this.getStatus(measureId);
+                const statusMap = this.getStatusMap(measureId);
 
-                acc[measureId] = toNestedObject(data, status, this.dimensions, withMetadata);
+                acc[measureId] = toNestedObject(data, statusMap, this.dimensions);
                 return acc;
             }, {});
         }
@@ -306,7 +316,7 @@ class Cube {
             for (let i = 0; i < this.dimensions.length; ++i)
                 if (j & (1 << i)) subCube = subCube.drillUp(this.dimensions[i].id, 'all');
 
-            merge(result, subCube.getNestedObjects(measureIds, false, withMetadata));
+            merge(result, subCube.getNestedObjects(measureIds, false));
         }
 
         return result;
@@ -747,7 +757,17 @@ class Cube {
 
         const newDimensions = this.dimensions.slice();
         newDimensions[dimIdx] = newDimensions[dimIdx].drillUp(attribute);
-        if (newDimensions[dimIdx] == this.dimensions[dimIdx]) return this;
+        if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
+            console.log(
+                'drillUp: no such attribute: ' +
+                    attribute +
+                    ' in dimension: ' +
+                    dimensionId +
+                    ' in cube: ' +
+                    this.dimensions.map(d => d.id).join(', ')
+            );
+            return this;
+        }
 
         const newCube = new Cube(newDimensions);
         Object.assign(newCube.computedMeasures, this.computedMeasures);

@@ -4,8 +4,8 @@ module.exports = (
     numOfDimensions,
     dimensionSize,
     numOfMeasures,
-    defaultMeasureValue = 1,
-    sparseDataRate
+    sparseDataRate = 1.0,
+    firstMeasureIndex = 0
 ) => {
     const dimensions = [];
 
@@ -20,8 +20,8 @@ module.exports = (
 
     const cube = new Cube(dimensions);
 
-    for (let i = 0; i < numOfMeasures; i++) {
-        cube.createStoredMeasure(`measure${i}`, {}, 'float32', defaultMeasureValue);
+    for (let i = firstMeasureIndex; i < firstMeasureIndex + numOfMeasures; i++) {
+        cube.createStoredMeasure(`measure${i}`, {}, 'float32', 0);
     }
 
     const sizeToFillDataRandomly = sparseDataRate * cube.storeSize;

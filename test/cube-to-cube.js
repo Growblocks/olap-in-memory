@@ -352,7 +352,7 @@ describe('Operation between cubes', function () {
                 new GenericDimension('period', 'season', ['winter']),
                 new GenericDimension('location', 'city', ['paris', 'tokyo']),
             ]);
-            cube2.createStoredMeasure('otherMeasure', {}, 'uint32', 666);
+            cube2.createStoredMeasure('otherMeasure', {}, 'uint32', NaN);
             cube.hydrateFromCube(cube2);
 
             assert.deepEqual(cube.getNestedObject('antennas'), {
@@ -372,14 +372,16 @@ describe('Operation between cubes', function () {
                 new GenericDimension('period', 'season', ['winter']),
                 new GenericDimension('location', 'city', ['paris', 'tokyo']),
             ]);
-            cube2.createStoredMeasure('antennas', {}, 'uint32', 666);
-            cube2.createStoredMeasure('otherMeasure', {}, 'uint32', 888);
+            cube2.createStoredMeasure('antennas', {}, 'uint32');
+            cube2.setNestedObject('antennas', { winter: { paris: 10, tokyo: 20 } });
+            cube2.createStoredMeasure('otherMeasure', {}, 'uint32');
+            cube2.setNestedObject('otherMeasure', { winter: { paris: 30, tokyo: 40 } });
 
             cube.hydrateFromCube(cube2);
 
             assert.deepEqual(cube.getNestedObject('antennas'), {
                 summer: { paris: 0, toledo: 0, tokyo: 0 },
-                winter: { paris: 666, toledo: 0, tokyo: 666 },
+                winter: { paris: 10, toledo: 0, tokyo: 20 },
             });
         });
 

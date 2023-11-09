@@ -41,24 +41,28 @@ describe('Drilling', function () {
                 cube.createStoredMeasure('data_sum', {}, 'float32', NaN);
                 cube.createStoredMeasure('data_avg', { time: 'average' }, 'float32', NaN);
                 cube.hydrateFromSparseNestedObject('data_sum', { '2010-01': 1, '2010-03': 2 });
-                cube.hydrateFromSparseNestedObject('data_avg', { '2010-01': 10, '2010-03': 20 });
+                cube.hydrateFromSparseNestedObject('data_avg', {
+                    '2010-01': 10,
+                    '2010-02': 0,
+                    '2010-03': 20,
+                });
 
                 newCube = cube.drillUp('time', 'quarter');
             });
 
             it('Drilled up cube should have summed', function () {
-                assert.deepEqual(newCube.getNestedObject('data_sum', true, true), {
-                    '2010-Q1': { v: 3, c: false, r: true },
-                    '2010-Q2': { v: NaN, c: false, r: true },
-                    all: { v: 3, c: false, r: true },
+                assert.deepEqual(newCube.getNestedObject('data_sum', true), {
+                    '2010-Q1': 3,
+                    '2010-Q2': NaN,
+                    all: 3,
                 });
             });
 
             it('Drilled up cube should have averaged', function () {
-                assert.deepEqual(newCube.getNestedObject('data_avg', true, true), {
-                    '2010-Q1': { v: 15, c: false, r: true },
-                    '2010-Q2': { v: NaN, c: false, r: true },
-                    all: { v: 15, c: false, r: true },
+                assert.deepEqual(newCube.getNestedObject('data_avg', true), {
+                    '2010-Q1': 10,
+                    '2010-Q2': NaN,
+                    all: 10,
                 });
             });
         });
@@ -70,7 +74,8 @@ describe('Drilling', function () {
 
             before(function () {
                 cube = new Cube([new TimeDimension('time', 'month', '2010-01', '2010-02')]);
-                cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', 100);
+                cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32');
+                cube.setNestedObject('measure1', { '2010-01': 100, '2010-02': 100 });
                 newCube = cube.drillDown('time', 'month');
             });
 
@@ -84,13 +89,15 @@ describe('Drilling', function () {
 
             before(function () {
                 cube = new Cube([new TimeDimension('time', 'month', '2010-01', '2010-02')]);
-                cube.createStoredMeasure('measure1', { time: 'sum' }, 'uint32', 100);
-                cube.createStoredMeasure('measure2', { time: 'average' }, 'uint32', 100);
+                cube.createStoredMeasure('measure1', { time: 'sum' }, 'uint32');
+                cube.createStoredMeasure('measure2', { time: 'average' }, 'uint32');
+                cube.setNestedObject('measure1', { '2010-01': 100, '2010-02': 100 });
+                cube.setNestedObject('measure2', { '2010-01': 100, '2010-02': 100 });
 
                 newCube = cube.drillDown('time', 'day');
             });
 
-            it('both measures should not have changed when drilled down and up again', function () {
+            it('both measures should not have changed when drilled down and up again 2', function () {
                 assert.deepEqual(
                     newCube.drillUp('time', 'month').getNestedObject('measure1'),
                     cube.getNestedObject('measure1')
@@ -110,8 +117,10 @@ describe('Drilling', function () {
                 cube = new Cube([
                     new TimeDimension('time', 'month_week_mon', '2010-01-W1-mon', '2010-02-W1-mon'),
                 ]);
-                cube.createStoredMeasure('measure1', { time: 'sum' }, 'uint32', 100);
-                cube.createStoredMeasure('measure2', { time: 'average' }, 'uint32', 100);
+                cube.createStoredMeasure('measure1', { time: 'sum' }, 'uint32');
+                cube.createStoredMeasure('measure2', { time: 'average' }, 'uint32');
+                cube.setNestedObject('measure1', { '2010-01-W1-mon': 100, '2010-02-W1-mon': 100 });
+                cube.setNestedObject('measure2', { '2010-01-W1-mon': 100, '2010-02-W1-mon': 100 });
 
                 newCube = cube.drillDown('time', 'day');
             });
@@ -153,7 +162,7 @@ describe('Drilling', function () {
             });
 
             it('newCube should have proper status flags', function () {
-                assert.deepEqual(newCube.getStatus('measure1'), [6, 6, 6, 1, 1, 1]);
+                assert.deepEqual(Array.from(newCube.getStatusMap('measure1').keys()), [0, 1, 2]);
             });
         });
     });
