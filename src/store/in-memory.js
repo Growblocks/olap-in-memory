@@ -234,6 +234,23 @@ class InMemoryStore {
         const contributions = new Uint16Array(newSize);
         let oldDimensionIndex = new Uint32Array(numDimensions);
 
+        // Define aggregation operations
+        const aggregations = {
+            sum: (a, b) => a + b,
+            average: (a, b) => a + b, // Average will be handled after summing
+            highest: (a, b) => Math.max(a, b),
+            lowest: (a, b) => Math.min(a, b),
+            first: (a, _) => a,
+            last: (_, b) => b,
+            product: (a, b) => a * b,
+        };
+        const aggregate = aggregations[method];
+
+        // Ensure the aggregate function is defined
+        if (!aggregate) {
+            throw new Error(`Unsupported aggregation method: ${method}`);
+        }
+
         for (const [oldIdx, oldValue] of this._dataMap.entries()) {
             let oldIndexCopy = oldIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
@@ -247,20 +264,12 @@ class InMemoryStore {
                 newIdx = newIdx * newDimLength[i] + offset;
             }
 
-            const newValue = newStore.getValue(newIdx);
-
-            if (isNaN(newValue) || newValue === this._defaultValue) {
+            if (!newStore._dataMap.has(newIdx)) {
                 newStore.setValue(newIdx, oldValue);
             } else {
-                if (method == 'last') newStore.setValue(newIdx, oldValue);
-                else if (method == 'highest')
-                    newStore.setValue(newIdx, newValue < oldValue ? oldValue : newValue);
-                else if (method == 'lowest')
-                    newStore.setValue(newIdx, newValue < oldValue ? newValue : oldValue);
-                else if (method == 'sum' || method == 'average')
-                    newStore.setValue(newIdx, newValue + oldValue);
-                else if (method == 'product') newStore.setValue(newIdx, newValue * oldValue);
+                newStore.setValue(newIdx, aggregate(newStore.getValue(newIdx), oldValue));
             }
+
             contributions[newIdx] += 1;
         }
 
