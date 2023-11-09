@@ -182,7 +182,7 @@ class InMemoryStore {
             const newItems = dimension.getItems();
             const oldItemsToIdx = oldDimensions[index].getItemsToIdx();
 
-            return newItems.map(newItem => oldItemsToIdx[newItem]);
+            return new Map(newItems.map((newItem, i) => [oldItemsToIdx[newItem], i]));
         });
 
         const newStore = new InMemoryStore(newLength, this._type, this._defaultValue);
@@ -196,9 +196,9 @@ class InMemoryStore {
             for (let i = numDimensions - 1; i >= 0; --i) {
                 oldDimensionIndex[i] = oldIndexCopy % oldDimLength[i];
 
-                const newDimIdx = dimIdxNewOldMap[i].indexOf(oldDimensionIndex[i]);
+                const newDimIdx = dimIdxNewOldMap[i].get(oldDimensionIndex[i]);
 
-                if (newDimIdx === -1) {
+                if (newDimIdx === undefined) {
                     halt = true;
                     break;
                 }
