@@ -283,7 +283,6 @@ class InMemoryStore {
         return newStore;
     }
 
-    /** fixme: This could be more memory efficient by doing like the other, instead of mapping all indexes */
     drillDown(oldDimensions, newDimensions, method = 'sum', distributions) {
         const useRounding = this._type == 'int32' || this._type == 'uint32';
         const oldSize = this._size;
@@ -325,10 +324,11 @@ class InMemoryStore {
 
         for (let newIdx = 0; newIdx < newSize; ++newIdx) {
             const oldIdx = idxNewOld[newIdx];
-            const oldValue = this.getValue(oldIdx);
+
+            const oldValue = this._dataMap.get(oldIdx);
+            if (!oldValue) continue;
 
             const numContributions = contributionsTotal[oldIdx];
-            // TODO: optimize this later
 
             if (distributions) {
                 const addedDimLength = newSize / oldSize;
@@ -351,10 +351,11 @@ class InMemoryStore {
                             Math.floor(contributionId * oneOverDistance) ===
                             Math.floor((contributionId - 1) * oneOverDistance);
 
-                        newStore.setValue(newIdx, Math.floor(value));
+                        const newValue = Math.floor(value);
                         if (!lastIsSame) {
-                            const newValue = newStore.getValue(newIdx);
                             newStore.setValue(newIdx, newValue + 1);
+                        } else {
+                            newStore.setValue(newIdx, newValue);
                         }
                     } else {
                         newStore.setValue(newIdx, oldValue / numContributions);
