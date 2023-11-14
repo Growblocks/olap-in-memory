@@ -28,7 +28,7 @@ declare module '@growblocks/olap-in-memory' {
             index?: number,
             distributionObj?: Record<string, number[]>
         ): Cube;
-        compose(cube: Cube, union: boolean): Cube;
+        compose(cube: Cube, union: boolean, fillWith?: Record<string, number> | null): Cube;
         computedMeasureIds: string[];
         convertToStoredMeasure(
             measureId: string,
