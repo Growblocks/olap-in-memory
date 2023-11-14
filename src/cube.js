@@ -790,7 +790,7 @@ class Cube {
      * For instance, composing a cube with sells by day, and number of open hour per week,
      * to compute average sell by opening hour per week.
      */
-    compose(otherCube, union = false) {
+    compose(otherCube, union = false, fillWith = null) {
         let newDimensions = this.dimensions.reduce((m, myDimension) => {
             const otherDimension = otherCube.getDimension(myDimension.id);
 
@@ -808,6 +808,9 @@ class Cube {
                 this.storedMeasures[measureId]._type,
                 this.storedMeasures[measureId]._defaultValue
             );
+            if (fillWith?.[measureId]) {
+                newCube.fillData(measureId, fillWith[measureId]);
+            }
             newCube.hydrateFromCube(this);
         });
         otherCube.storedMeasureIds.forEach(measureId => {
@@ -817,6 +820,9 @@ class Cube {
                 otherCube.storedMeasures[measureId]._type,
                 otherCube.storedMeasures[measureId]._defaultValue
             );
+            if (fillWith?.[measureId]) {
+                newCube.fillData(measureId, fillWith[measureId]);
+            }
             newCube.hydrateFromCube(otherCube);
         });
 
