@@ -124,9 +124,17 @@ class InMemoryStore {
         });
 
         const hisDimIdx = new Uint32Array(numDimensions);
-        for (const [hisIdx, hisValue] of otherStore._dataMap.entries()) {
+
+        // This method cannot be optimized to iterate only over the entries of
+        // 'otherStore'. Just iterating over the other store entries could be
+        // a mistake in here because we can not guarantee that 'this store' has
+        // the same values stored. Imagine that we have 'this store' filled with
+        // '1' and the other store has a space filled with '0' (default value),
+        // by skipping the default values we are not filling the store with
+        // the default value of 'otherStore'.
+        for (let otherIdx = 0; otherIdx < otherStore._size; ++otherIdx) {
             // Decompose new index into dimensions indexes
-            let hisIdxCpy = hisIdx;
+            let hisIdxCpy = otherIdx;
             for (let i = numDimensions - 1; i >= 0; --i) {
                 hisDimIdx[i] = hisIdxCpy % hisDimLengths[i];
                 hisIdxCpy = Math.floor(hisIdxCpy / hisDimLengths[i]);
@@ -139,7 +147,7 @@ class InMemoryStore {
                 myIdx = myIdx * myDimLengths[i] + offset;
             }
 
-            this.setValue(myIdx, hisValue);
+            this.setValue(myIdx, otherStore.getValue(otherIdx));
         }
     }
 
