@@ -237,7 +237,13 @@ class Cube {
             for (let i = 0; i < storeSize; ++i) {
                 for (let j = 0; j < numMeasures; ++j) {
                     params[measureIds[j]] = measures[j].getValue(i);
-                    params[`${measureIds[j]}__total`] = measures[j].total;
+
+                    const formulaContainTotal = this.computedMeasures[measureId]
+                        .toString()
+                        .includes(`${measureIds[j]}__total`);
+                    if (formulaContainTotal) {
+                        params[`${measureIds[j]}__total`] = measures[j].total;
+                    }
                 }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
