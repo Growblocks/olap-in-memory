@@ -110,6 +110,20 @@ class Cube {
         this.computedMeasures[measureId] = expression;
     }
 
+    copyStoredMeasure(measureId, copyMeasureId) {
+        if (!/^[a-z][_a-z0-9]*$/i.test(copyMeasureId))
+            throw new Error(`Invalid measureId: ${copyMeasureId}`);
+
+        if (this.storedMeasures[measureId] === undefined)
+            throw new Error(`This measure does not exists: ${measureId}`);
+
+        if (this.storedMeasures[copyMeasureId] !== undefined)
+            throw new Error(`This measure already exists: ${copyMeasureId}`);
+
+        this.storedMeasures[copyMeasureId] = cloneDeep(this.storedMeasures[measureId]);
+        this.storedMeasuresRules[copyMeasureId] = cloneDeep(this.storedMeasuresRules[measureId]);
+    }
+
     createStoredMeasure(measureId, rules = {}, type = 'float32', defaultValue = 0) {
         if (!/^[a-z][_a-z0-9]*$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);

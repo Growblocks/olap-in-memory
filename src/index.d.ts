@@ -58,6 +58,7 @@ declare module '@growblocks/olap-in-memory' {
             targetMeasureId: string,
             dimensionsFilter: Record<string, string | string[]>
         ): void;
+        copyStoredMeasure(measureId: string, copyMeasureId: string): void;
         collapse(): Cube;
         dice(dimensionId: string, attribute: string, value: string[]): Cube;
         diceRange(dimensionId: string, attribute: string, start: string, end: string): Cube;
