@@ -76,7 +76,7 @@ class Cube {
     }
 
     createComputedMeasure(measureId, formula) {
-        if (!/^[a-z][_a-z0-9]+$/i.test(measureId))
+        if (!/^[a-z][_a-z0-9]+$/i.test(measureId) && !/^[_a-z0-9]+__total$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (
@@ -100,7 +100,14 @@ class Cube {
 
         const expression = getParser().parse(processedFormula);
         const variables = expression.variables({ withMembers: true });
-        if (!variables.every(variable => this.storedMeasureIds.includes(variable)))
+        if (
+            !variables.every(variable =>
+                [
+                    ...this.storedMeasureIds,
+                    ...this.storedMeasureIds.map(m => `${m}__total`),
+                ].includes(variable)
+            )
+        )
             throw new Error(
                 `Unknown measure(s): ${variables.filter(
                     variable => !this.storedMeasureIds.includes(variable)
@@ -242,6 +249,12 @@ class Cube {
             for (let i = 0; i < storeSize; ++i) {
                 for (let j = 0; j < measures.length; ++j) {
                     params[measures[j]] = this.storedMeasures[measures[j]].getValue(i);
+                    const formulaContainTotal = this.computedMeasures[measureId]
+                        .toString()
+                        .includes(`${measures[j]}__total`);
+                    if (formulaContainTotal) {
+                        params[`${measures[j]}__total`] = this.storedMeasures[measures[j]].total;
+                    }
                 }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);

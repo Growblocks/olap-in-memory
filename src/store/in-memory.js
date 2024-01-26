@@ -15,6 +15,18 @@ class InMemoryStore {
         return this._size * (typeToSize[this._type] || 1);
     }
 
+    get size() {
+        return this._size;
+    }
+
+    get total() {
+        let total = 0;
+        for (const value of this._dataMap.values()) {
+            total += value;
+        }
+        return total;
+    }
+
     get data() {
         const result = new Array(this._size).fill(this._defaultValue);
         for (const [index, value] of this._dataMap.entries()) {
