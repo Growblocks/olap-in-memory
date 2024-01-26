@@ -220,16 +220,14 @@ class Cube {
             return this.storedMeasures[measureId].data;
         else if (this.computedMeasures[measureId] !== undefined) {
             const storeSize = this.storeSize;
-            const measureIds = this.storedMeasureIds;
-            const measures = measureIds.map(id => this.storedMeasures[id]);
-            const numMeasures = measures.length;
+            const measures = this.computedMeasures[measureId].variables({ withMembers: true });
 
             // Fill result array
             const result = new Array(storeSize);
             const params = {};
             for (let i = 0; i < storeSize; ++i) {
-                for (let j = 0; j < numMeasures; ++j) {
-                    params[measureIds[j]] = measures[j].getValue(i);
+                for (let j = 0; j < measures.length; ++j) {
+                    params[measures[j]] = this.storedMeasures[measures[j]].getValue(i);
                 }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
@@ -366,9 +364,9 @@ class Cube {
         if (this.storedMeasures[measureId] !== undefined)
             return this.storedMeasures[measureId].getValue(position);
         else if (this.computedMeasures[measureId] !== undefined) {
-            const measureIds = this.storedMeasureIds;
+            const measures = this.computedMeasures[measureId].variables({ withMembers: true });
 
-            const params = measureIds.reduce((acc, measureId) => {
+            const params = measures.reduce((acc, measureId) => {
                 acc[measureId] = this.storedMeasures[measureId].getValue(position);
                 return acc;
             }, {});
