@@ -242,19 +242,24 @@ class Cube {
         else if (this.computedMeasures[measureId] !== undefined) {
             const storeSize = this.storeSize;
             const measures = this.computedMeasures[measureId].variables({ withMembers: true });
+            const storedMeasures = measures.filter(measureId => !measureId.includes('__total'));
+            const measureTotals = measures
+                .filter(measureId => measureId.includes('__total'))
+                .reduce((acc, measureId) => {
+                    acc[measureId] = this.storedMeasures[measureId.replace('__total', '')].total;
+                    return acc;
+                }, {});
 
             // Fill result array
             const result = new Array(storeSize);
             const params = {};
+            Object.entries(measureTotals).forEach(([measureId, total]) => {
+                params[measureId] = total;
+            });
+
             for (let i = 0; i < storeSize; ++i) {
-                for (let j = 0; j < measures.length; ++j) {
-                    params[measures[j]] = this.storedMeasures[measures[j]].getValue(i);
-                    const formulaContainTotal = this.computedMeasures[measureId]
-                        .toString()
-                        .includes(`${measures[j]}__total`);
-                    if (formulaContainTotal) {
-                        params[`${measures[j]}__total`] = this.storedMeasures[measures[j]].total;
-                    }
+                for (let j = 0; j < storedMeasures.length; ++j) {
+                    params[storedMeasures[j]] = this.storedMeasures[storedMeasures[j]].getValue(i);
                 }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
