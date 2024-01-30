@@ -241,21 +241,20 @@ class Cube {
             return this.storedMeasures[measureId].data;
         else if (this.computedMeasures[measureId] !== undefined) {
             const storeSize = this.storeSize;
+            const params = {};
+
+            // Collect needed measures
             const measures = this.computedMeasures[measureId].variables({ withMembers: true });
             const storedMeasures = measures.filter(measureId => !measureId.includes('__total'));
-            const measureTotals = measures
+            // Fill params with stored measures total values
+            measures
                 .filter(measureId => measureId.includes('__total'))
-                .reduce((acc, measureId) => {
-                    acc[measureId] = this.storedMeasures[measureId.replace('__total', '')].total;
-                    return acc;
-                }, {});
+                .forEach(measureId => {
+                    params[measureId] = this.storedMeasures[measureId.replace('__total', '')].total;
+                });
 
             // Fill result array
             const result = new Array(storeSize);
-            const params = {};
-            Object.entries(measureTotals).forEach(([measureId, total]) => {
-                params[measureId] = total;
-            });
 
             for (let i = 0; i < storeSize; ++i) {
                 for (let j = 0; j < storedMeasures.length; ++j) {
