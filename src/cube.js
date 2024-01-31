@@ -463,14 +463,18 @@ class Cube {
      */
     diceByDimensionItems(dimensionItemsMap, reorder = false) {
         const newDimensions = this.dimensions.slice();
-        Object.entries(dimensionItemsMap).forEach(([dimensionId, item]) => {
+        Object.entries(dimensionItemsMap).forEach(([dimensionId, items]) => {
             const dimIdx = this.getDimensionIndex(dimensionId);
             if (dimIdx === -1) return;
             const rootAttribute =
                 dimensionId === 'time'
-                    ? TimeSlot.fromValue(item).periodicity
+                    ? TimeSlot.fromValue(items).periodicity
                     : this.dimensions[dimIdx].rootAttribute;
-            newDimensions[dimIdx] = newDimensions[dimIdx].dice(rootAttribute, [item], reorder);
+            newDimensions[dimIdx] = newDimensions[dimIdx].dice(
+                rootAttribute,
+                [items].flat(),
+                reorder
+            );
         });
 
         // early return if no dimensions were diced
