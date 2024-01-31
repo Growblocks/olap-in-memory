@@ -501,7 +501,7 @@ class Cube {
     }
 
     getTotal(measureId) {
-        return this.getData(measureId).reduce((acc, value) => acc + value, 0);
+        return this.storedMeasures[measureId].total;
     }
 
     getTotalForDimensionItems(measureId, dimensionsFilter = {}) {
