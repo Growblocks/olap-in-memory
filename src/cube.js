@@ -76,7 +76,7 @@ class Cube {
     }
 
     createComputedMeasure(measureId, formula) {
-        if (!/^[a-z][_a-z0-9]+$/i.test(measureId))
+        if (!/^[a-z][_a-z0-9]+$/i.test(measureId) && !/^[_a-z0-9]+__total$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (
@@ -100,7 +100,14 @@ class Cube {
 
         const expression = getParser().parse(processedFormula);
         const variables = expression.variables({ withMembers: true });
-        if (!variables.every(variable => this.storedMeasureIds.includes(variable)))
+        if (
+            !variables.every(variable =>
+                [
+                    ...this.storedMeasureIds,
+                    ...this.storedMeasureIds.map(m => `${m}__total`),
+                ].includes(variable)
+            )
+        )
             throw new Error(
                 `Unknown measure(s): ${variables.filter(
                     variable => !this.storedMeasureIds.includes(variable)
@@ -108,6 +115,20 @@ class Cube {
             );
 
         this.computedMeasures[measureId] = expression;
+    }
+
+    copyStoredMeasure(measureId, copyMeasureId) {
+        if (!/^[a-z][_a-z0-9]*$/i.test(copyMeasureId))
+            throw new Error(`Invalid measureId: ${copyMeasureId}`);
+
+        if (this.storedMeasures[measureId] === undefined)
+            throw new Error(`This measure does not exists: ${measureId}`);
+
+        if (this.storedMeasures[copyMeasureId] !== undefined)
+            throw new Error(`This measure already exists: ${copyMeasureId}`);
+
+        this.storedMeasures[copyMeasureId] = cloneDeep(this.storedMeasures[measureId]);
+        this.storedMeasuresRules[copyMeasureId] = cloneDeep(this.storedMeasuresRules[measureId]);
     }
 
     createStoredMeasure(measureId, rules = {}, type = 'float32', defaultValue = 0) {
@@ -220,16 +241,24 @@ class Cube {
             return this.storedMeasures[measureId].data;
         else if (this.computedMeasures[measureId] !== undefined) {
             const storeSize = this.storeSize;
-            const measureIds = this.storedMeasureIds;
-            const measures = measureIds.map(id => this.storedMeasures[id]);
-            const numMeasures = measures.length;
+            const params = {};
+
+            // Collect needed measures
+            const measures = this.computedMeasures[measureId].variables({ withMembers: true });
+            const storedMeasures = measures.filter(measureId => !measureId.includes('__total'));
+            // Fill params with stored measures total values
+            measures
+                .filter(measureId => measureId.includes('__total'))
+                .forEach(measureId => {
+                    params[measureId] = this.storedMeasures[measureId.replace('__total', '')].total;
+                });
 
             // Fill result array
             const result = new Array(storeSize);
-            const params = {};
+
             for (let i = 0; i < storeSize; ++i) {
-                for (let j = 0; j < numMeasures; ++j) {
-                    params[measureIds[j]] = measures[j].getValue(i);
+                for (let j = 0; j < storedMeasures.length; ++j) {
+                    params[storedMeasures[j]] = this.storedMeasures[storedMeasures[j]].getValue(i);
                 }
 
                 result[i] = this.computedMeasures[measureId].evaluate(params);
@@ -366,9 +395,9 @@ class Cube {
         if (this.storedMeasures[measureId] !== undefined)
             return this.storedMeasures[measureId].getValue(position);
         else if (this.computedMeasures[measureId] !== undefined) {
-            const measureIds = this.storedMeasureIds;
+            const measures = this.computedMeasures[measureId].variables({ withMembers: true });
 
-            const params = measureIds.reduce((acc, measureId) => {
+            const params = measures.reduce((acc, measureId) => {
                 acc[measureId] = this.storedMeasures[measureId].getValue(position);
                 return acc;
             }, {});
