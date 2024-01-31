@@ -76,7 +76,7 @@ class Cube {
     }
 
     createComputedMeasure(measureId, formula) {
-        if (!/^[a-z][_a-z0-9]+$/i.test(measureId) && !/^[_a-z0-9]+__total$/i.test(measureId))
+        if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (
@@ -118,7 +118,7 @@ class Cube {
     }
 
     copyStoredMeasure(measureId, copyMeasureId) {
-        if (!/^[a-z][_a-z0-9]*$/i.test(copyMeasureId))
+        if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(copyMeasureId))
             throw new Error(`Invalid measureId: ${copyMeasureId}`);
 
         if (this.storedMeasures[measureId] === undefined)
@@ -132,7 +132,7 @@ class Cube {
     }
 
     createStoredMeasure(measureId, rules = {}, type = 'float32', defaultValue = 0) {
-        if (!/^[a-z][_a-z0-9]*$/i.test(measureId))
+        if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (this.storedMeasures[measureId] !== undefined)
@@ -143,7 +143,7 @@ class Cube {
     }
 
     cloneStoredMeasure(originCube, measureId) {
-        if (!/^[a-z][_a-z0-9]*$/i.test(measureId))
+        if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
             throw new Error(`Invalid measureId: ${measureId}`);
 
         if (this.storedMeasures[measureId] !== undefined)
