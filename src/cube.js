@@ -1,4 +1,5 @@
 const merge = require('lodash.merge');
+const TimeSlot = require('timeslot-dag');
 const cloneDeep = require('lodash.clonedeep');
 const DimensionFactory = require('./dimension/factory');
 const CatchAllDimension = require('./dimension/catch-all');
@@ -460,16 +461,33 @@ class Cube {
      * Dimensions here is an object with dimension id as key and dimension items as value.
      * (similar to the output of getDimensionItemsMap)
      */
-    diceByDimensionItems(dimensionItemsMap) {
-        return Object.keys(dimensionItemsMap).reduce((acc, dimension) => {
-            const values = [dimensionItemsMap[dimension]].flat();
-            if (values.length > 0 && acc.dimensionIds.includes(dimension)) {
-                const rootAttribute = this.getDimension(dimension).rootAttribute;
-                return acc.dice(dimension, rootAttribute, values);
-            }
+    diceByDimensionItems(dimensionItemsMap, reorder = false) {
+        const newDimensions = this.dimensions.slice();
+        Object.entries(dimensionItemsMap).forEach(([dimensionId, item]) => {
+            const dimIdx = this.getDimensionIndex(dimensionId);
+            if (dimIdx === -1) return;
+            const rootAttribute =
+                dimensionId === 'time'
+                    ? TimeSlot.fromValue(item).periodicity
+                    : this.dimensions[dimIdx].rootAttribute;
+            newDimensions[dimIdx] = newDimensions[dimIdx].dice(rootAttribute, [item], reorder);
+        });
 
-            return acc;
-        }, this);
+        // early return if no dimensions were diced
+        if (newDimensions.every((d, i) => d === this.dimensions[i])) {
+            return this;
+        }
+
+        const newCube = new Cube(newDimensions);
+        Object.assign(newCube.computedMeasures, this.computedMeasures);
+        Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
+        for (let measureId in this.storedMeasures)
+            newCube.storedMeasures[measureId] = this.storedMeasures[measureId].dice(
+                this.dimensions,
+                newDimensions
+            );
+
+        return newCube;
     }
 
     /*
