@@ -374,12 +374,16 @@ class Cube {
     }
 
     setSingleData(measureId, coords, value) {
-        if (!this.dimensionIds.every(dimensionId => Boolean(coords[dimensionId]))) {
-            throw new Error(`setSingleData: no value for all dimensions`);
+        if (this.dimensionIds.some(dimensionId => !coords[dimensionId])) {
+            throw new Error(
+                `setSingleData: no value for all dimensions. Dimensions: ${
+                    this.dimensionIds
+                }, Coords: ${JSON.stringify(coords)}`
+            );
         }
 
         if (this.storedMeasures[measureId] === undefined) {
-            throw new Error(`setSingleData: no such measure ${measureId}`);
+            throw new Error(`setSingleData: no such stored measure ${measureId}`);
         }
 
         const position = this.getPosition(coords);
@@ -387,8 +391,12 @@ class Cube {
     }
 
     getSingleData(measureId, coords) {
-        if (!this.dimensionIds.every(dimensionId => Boolean(coords[dimensionId]))) {
-            throw new Error(`getSingleData: no value for all dimensions`);
+        if (this.dimensionIds.some(dimensionId => !coords[dimensionId])) {
+            throw new Error(
+                `getSingleData: no value for all dimensions. Dimensions: ${
+                    this.dimensionIds
+                }, Coords: ${JSON.stringify(coords)}`
+            );
         }
 
         const position = this.getPosition(coords);
@@ -501,7 +509,7 @@ class Cube {
     iterateOverDimension(dimension, cb) {
         const excludeDimensionIds = this.dimensionIds.filter(id => id !== dimension);
         if (excludeDimensionIds.length === this.dimensionIds.length) {
-            throw new Error(`Cube has no ${dimension} dimension`);
+            throw new Error(`Cube has no ${dimension} dimension. Dimensions: ${this.dimensionIds}`);
         }
 
         if (excludeDimensionIds.length === 0) {
@@ -562,9 +570,16 @@ class Cube {
             const dimension = this.dimensions[i];
             const item = coords[dimension.id];
             if (item === undefined)
-                throw new Error(`getPosition: no such dimension ${dimension.id}`);
+                throw new Error(
+                    `getPosition: no such dimension ${dimension.id}. Coords: ${JSON.stringify(
+                        coords
+                    )}`
+                );
             const itemIndex = dimension.getRootIndexFromRootItem(item);
-            if (itemIndex === -1) throw new Error(`getPosition: no such item ${item}`);
+            if (itemIndex === -1)
+                throw new Error(
+                    `getPosition: no such item ${item}. Dimension items: ${dimension.getItems()}`
+                );
             position = position * dimension.numItems + itemIndex;
         }
         return position;
