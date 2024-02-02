@@ -217,18 +217,36 @@ class Cube {
     }
 
     dropMeasure(measureId) {
-        if (this.computedMeasures[measureId] !== undefined) delete this.computedMeasures[measureId];
-        else if (this.storedMeasures[measureId] !== undefined) {
+        if (this.computedMeasures[measureId] !== undefined) {
+            delete this.computedMeasures[measureId];
+        } else if (this.storedMeasures[measureId] !== undefined) {
             delete this.storedMeasures[measureId];
             delete this.storedMeasuresRules[measureId];
-
-            for (let computedMeasureId in this.computedMeasures) {
+            Object.keys(this.computedMeasures).forEach(computedMeasureId => {
                 const expression = this.computedMeasures[computedMeasureId];
                 if (expression.variables().includes(measureId)) {
                     delete this.computedMeasures[computedMeasureId];
                 }
-            }
-        } else throw new Error(`dropMeasure: no such measure: ${measureId}`);
+            });
+        } else {
+            throw new Error(`dropMeasure: no such measure: ${measureId}`);
+        }
+    }
+
+    dropMeasures(measureIds) {
+        measureIds.forEach(measureId => this.dropMeasure(measureId));
+    }
+
+    keepMeasure(measureId) {
+        [...this.computedMeasureIds, ...this.storedMeasureIds]
+            .filter(id => id !== measureId)
+            .forEach(id => this.dropMeasure(id));
+    }
+
+    keepMeasures(measureIds) {
+        [...this.computedMeasureIds, ...this.storedMeasureIds]
+            .filter(id => !measureIds.includes(id))
+            .forEach(id => this.dropMeasure(id));
     }
 
     collapse() {

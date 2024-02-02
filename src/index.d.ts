@@ -66,6 +66,9 @@ declare module '@growblocks/olap-in-memory' {
         drillDown(dimensionId: string, attribute: string, distributions?: number[]): Cube;
         drillUp(dimensionId: string, attribute: string, values?: string[]): Cube;
         dropMeasure(measure: string): void;
+        dropMeasures(measureIds: string[]): void;
+        keepMeasure(measure: string): void;
+        keepMeasures(measureIds: string[]): void;
         getData(measure: string): number[];
         getDimension(dimensionId: string): GenericDimension | TimeDimension;
         getDistribution(measure: string, filter: Record<string, string[]>): number;
