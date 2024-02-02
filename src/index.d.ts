@@ -78,7 +78,11 @@ declare module '@growblocks/olap-in-memory' {
             cb: (dicedCube: Cube, dimensionItems: Record<string, string>) => void
         ): void;
         aggregateByDimensions(excludeDimensionIds: string[]): Cube;
-        diceByDimensionItems(dimensions: Record<string, string | string[]>): Cube;
+        diceByDimensionItems(
+            dimensions: Record<string, string | string[]>,
+            measures?: string[],
+            reorder?: boolean
+        ): Cube;
         getDimensionItemsMap(excludeDimensionIds?: string[]): Record<string, string[]>;
         iterateOverDimension(
             dimension: string,
