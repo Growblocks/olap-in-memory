@@ -217,18 +217,36 @@ class Cube {
     }
 
     dropMeasure(measureId) {
-        if (this.computedMeasures[measureId] !== undefined) delete this.computedMeasures[measureId];
-        else if (this.storedMeasures[measureId] !== undefined) {
+        if (this.computedMeasures[measureId] !== undefined) {
+            delete this.computedMeasures[measureId];
+        } else if (this.storedMeasures[measureId] !== undefined) {
             delete this.storedMeasures[measureId];
             delete this.storedMeasuresRules[measureId];
-
-            for (let computedMeasureId in this.computedMeasures) {
+            Object.keys(this.computedMeasures).forEach(computedMeasureId => {
                 const expression = this.computedMeasures[computedMeasureId];
                 if (expression.variables().includes(measureId)) {
                     delete this.computedMeasures[computedMeasureId];
                 }
-            }
-        } else throw new Error(`dropMeasure: no such measure: ${measureId}`);
+            });
+        } else {
+            throw new Error(`dropMeasure: no such measure: ${measureId}`);
+        }
+    }
+
+    dropMeasures(measureIds) {
+        measureIds.forEach(measureId => this.dropMeasure(measureId));
+    }
+
+    keepMeasure(measureId) {
+        [...this.computedMeasureIds, ...this.storedMeasureIds]
+            .filter(id => id !== measureId)
+            .forEach(id => this.dropMeasure(id));
+    }
+
+    keepMeasures(measureIds) {
+        [...this.computedMeasureIds, ...this.storedMeasureIds]
+            .filter(id => !measureIds.includes(id))
+            .forEach(id => this.dropMeasure(id));
     }
 
     collapse() {
@@ -469,7 +487,7 @@ class Cube {
      * Dimensions here is an object with dimension id as key and dimension items as value.
      * (similar to the output of getDimensionItemsMap)
      */
-    diceByDimensionItems(dimensionItemsMap, reorder = false) {
+    diceByDimensionItems(dimensionItemsMap, measures = [], reorder = false) {
         const newDimensions = this.dimensions.slice();
         Object.entries(dimensionItemsMap).forEach(([dimensionId, items]) => {
             const dimIdx = this.getDimensionIndex(dimensionId);
@@ -491,13 +509,23 @@ class Cube {
         }
 
         const newCube = new Cube(newDimensions);
-        Object.assign(newCube.computedMeasures, this.computedMeasures);
-        Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
-        for (let measureId in this.storedMeasures)
+        const filterMeasures = measureIds =>
+            measures.length === 0
+                ? measureIds
+                : measureIds.filter(measureId => measures.includes(measureId));
+        const computedMeasuresToCopy = filterMeasures(this.computedMeasureIds);
+        const storedMeasuresToCopy = filterMeasures(this.storedMeasureIds);
+
+        computedMeasuresToCopy.forEach(measureId => {
+            newCube.computedMeasures[measureId] = this.computedMeasures[measureId];
+        });
+        storedMeasuresToCopy.forEach(measureId => {
             newCube.storedMeasures[measureId] = this.storedMeasures[measureId].dice(
                 this.dimensions,
                 newDimensions
             );
+            newCube.storedMeasuresRules[measureId] = this.storedMeasuresRules[measureId];
+        });
 
         return newCube;
     }
