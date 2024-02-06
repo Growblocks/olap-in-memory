@@ -56,16 +56,27 @@ class Cube {
         this.computedMeasures = {};
     }
 
-    clone() {
-        const clone = new Cube(cloneDeep(this.dimensions));
-        clone.computedMeasures = Object.assign({}, this.computedMeasures);
+    clone(measures = []) {
+        const cloneCube = new Cube(cloneDeep(this.dimensions));
 
-        this.storedMeasureIds.forEach(measureId => {
-            clone.storedMeasures[measureId] = this.storedMeasures[measureId].clone();
+        const filterMeasures = measureIds =>
+            measures.length === 0
+                ? measureIds
+                : measureIds.filter(measureId => measures.includes(measureId));
+        const computedMeasuresToCopy = filterMeasures(this.computedMeasureIds);
+        const storedMeasuresToCopy = filterMeasures(this.storedMeasureIds);
+
+        computedMeasuresToCopy.forEach(measureId => {
+            cloneCube.computedMeasures[measureId] = this.computedMeasures[measureId];
         });
-        clone.storedMeasuresRules = cloneDeep(this.storedMeasuresRules);
+        storedMeasuresToCopy.forEach(measureId => {
+            cloneCube.storedMeasures[measureId] = this.storedMeasures[measureId].clone();
+            cloneCube.storedMeasuresRules[measureId] = cloneDeep(
+                this.storedMeasuresRules[measureId]
+            );
+        });
 
-        return clone;
+        return cloneCube;
     }
 
     getDimension(dimensionId) {
@@ -524,7 +535,7 @@ class Cube {
                 this.dimensions,
                 newDimensions
             );
-            newCube.storedMeasuresRules[measureId] = this.storedMeasuresRules[measureId];
+            newCube.storedMeasuresRules[measureId] = cloneDeep(this.storedMeasuresRules[measureId]);
         });
 
         return newCube;

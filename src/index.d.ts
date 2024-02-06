@@ -50,7 +50,7 @@ declare module '@growblocks/olap-in-memory' {
             measureType?: string,
             defaultValue?: number
         ): void;
-        clone(): Cube;
+        clone(measures?: string[]): Cube;
         cloneStoredMeasure(originCube: Cube, measureId: string): void;
         computedMeasures: Object;
         copyMeasureData(
