@@ -1,9 +1,13 @@
+import { Parser } from 'expr-eval';
+
 declare module '@growblocks/olap-in-memory' {
     type NestedNumberObject = {
         [key: string]: number | NestedNumberObject;
     };
 
     type NestedNumberArray = number[] | NestedNumberArray[];
+
+    export function getParser(): Parser;
 
     export class TimeDimension {
         id: string;
