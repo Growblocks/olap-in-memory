@@ -227,6 +227,29 @@ class Cube {
         }
     }
 
+    overrideStoredMeasure(overridingMeasure, overriddenMeasure, dropOverridden = true) {
+        if (this.storedMeasures[overridingMeasure] === undefined)
+            throw new Error(`replaceStoredMeasure: no such measure ${overridingMeasure}`);
+
+        if (this.storedMeasures[overriddenMeasure] === undefined)
+            throw new Error(`replaceStoredMeasure: no such measure ${overriddenMeasure}`);
+
+        for (let computedMeasureId in this.computedMeasures) {
+            const expression = this.computedMeasures[computedMeasureId];
+            const regex = new RegExp(`\\b${overriddenMeasure}\\b`, 'g');
+            if (expression.toString().match(regex)) {
+                this.computedMeasures[computedMeasureId] = expression.substitute(
+                    overriddenMeasure,
+                    overridingMeasure
+                );
+            }
+        }
+
+        if (dropOverridden) {
+            this.dropMeasure(overriddenMeasure);
+        }
+    }
+
     dropMeasure(measureId) {
         if (this.computedMeasures[measureId] !== undefined) {
             delete this.computedMeasures[measureId];
