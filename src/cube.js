@@ -227,27 +227,22 @@ class Cube {
         }
     }
 
-    overrideStoredMeasure(overridingMeasure, overriddenMeasure, dropOverridden = true) {
-        if (this.storedMeasures[overridingMeasure] === undefined)
-            throw new Error(`replaceStoredMeasure: no such measure ${overridingMeasure}`);
+    replaceStoredMeasure(toKeep, toDrop) {
+        if (this.storedMeasures[toKeep] === undefined)
+            throw new Error(`replaceStoredMeasure: no such measure ${toKeep}`);
 
-        if (this.storedMeasures[overriddenMeasure] === undefined)
-            throw new Error(`replaceStoredMeasure: no such measure ${overriddenMeasure}`);
+        if (this.storedMeasures[toDrop] === undefined)
+            throw new Error(`replaceStoredMeasure: no such measure ${toDrop}`);
 
         for (let computedMeasureId in this.computedMeasures) {
             const expression = this.computedMeasures[computedMeasureId];
-            const regex = new RegExp(`\\b${overriddenMeasure}\\b`, 'g');
+            const regex = new RegExp(`\\b${toDrop}\\b`, 'g');
             if (expression.toString().match(regex)) {
-                this.computedMeasures[computedMeasureId] = expression.substitute(
-                    overriddenMeasure,
-                    overridingMeasure
-                );
+                this.computedMeasures[computedMeasureId] = expression.substitute(toDrop, toKeep);
             }
         }
 
-        if (dropOverridden) {
-            this.dropMeasure(overriddenMeasure);
-        }
+        this.dropMeasure(toDrop);
     }
 
     dropMeasure(measureId) {

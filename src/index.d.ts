@@ -103,11 +103,7 @@ declare module '@growblocks/olap-in-memory' {
         hydrateFromCube(cube: Cube): void;
         hydrateFromSparseNestedObject(measure: string, data: NestedNumberObject): void;
         keepDimensions(dimensionIds: string[]): Cube;
-        overrideStoredMeasure(
-            overridingMeasure: string,
-            overriddenMeasure: string,
-            dropOverridden?: boolean
-        ): void;
+        replaceStoredMeasure(toKeep: string, toDrop: string): void;
         removeDimension(dimensionId: string): Cube;
         removeDimensions(dimensionIds: string[]): Cube;
         renameMeasure(oldName: string, newName: string): void;
