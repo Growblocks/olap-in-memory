@@ -25,10 +25,12 @@ module.exports = {
     value = [value];
 
     for (let i = 0; i < dimensions.length; ++i) {
+      // biome-ignore lint/style/useSingleVarDeclarator: <explanation>
       const dimItems = dimensions[i].getItems(),
         newValue = new Array(value.length * dimensions[i].numItems);
 
       for (let j = 0; j < newValue.length; ++j) {
+        // biome-ignore lint/style/useSingleVarDeclarator: <explanation>
         const chunkIndex = Math.floor(j / dimItems.length),
           dimItem = dimItems[j % dimItems.length];
 

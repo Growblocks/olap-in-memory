@@ -44,7 +44,8 @@
       },
       "style": {
         "useEnumInitializers": "off",
-        "noParameterAssign": "off"
+        "noParameterAssign": "off",
+        "noUselessElse": "off"
       }
     }
   }
