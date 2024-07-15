@@ -137,7 +137,6 @@ class TimeDimension extends AbstractDimension {
       return this;
     }
 
-    // biome-ignore lint/style/useSingleVarDeclarator: <explanation>
     let newStart, newEnd;
 
     if (start) {

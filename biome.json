@@ -45,7 +45,8 @@
       "style": {
         "useEnumInitializers": "off",
         "noParameterAssign": "off",
-        "noUselessElse": "off"
+        "noUselessElse": "off",
+        "useSingleVarDeclarator": "off"
       }
     }
   }

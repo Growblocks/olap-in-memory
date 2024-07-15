@@ -29,14 +29,13 @@ class GenericDimension extends AbstractDimension {
     this._rootIdxToGroupIdx = {};
     this._rootIdxToGroupIdx.all = new Uint32Array(items.length); // everything points to item 0
     this._rootIdxToGroupIdx[rootAttribute] = new Uint32Array(
-      items.map((item, index) => index),
+      items.map((_item, index) => index),
     );
 
     // Mapping for labels
     this._itemToLabel = {};
     this._itemToLabel.all = { all: 'All' };
     this._itemToLabel[rootAttribute] = {};
-    // biome-ignore lint/complexity/noForEach: n/a
     items.forEach((item) => {
       this._itemToLabel[rootAttribute][item] = this._getOrCall(
         itemToLabelMap,
@@ -175,7 +174,6 @@ class GenericDimension extends AbstractDimension {
       const mapping = {};
 
       for (let i = 0; i < rootItems.length; ++i) {
-        // biome-ignore lint/style/useSingleVarDeclarator: n/a
         const childItem = childItems[childMapping[i]],
           newItem = newItems[newMapping[i]];
 
@@ -265,23 +263,22 @@ class GenericDimension extends AbstractDimension {
       me = me.drillUp(otherDimension._rootAttribute);
     else if (otherDimension.attributes.includes(this._rootAttribute))
       other = other.drillUp(this._rootAttribute);
-    else throw new Error(`The dimensions are not compatible`);
+    else throw new Error('The dimensions are not compatible');
 
     // Mapping functions
     const anyItemToGroup = (groupAttr, rootItem) => {
       try {
         return me.getGroupItemFromRootItem(groupAttr, rootItem);
-      } catch (e) {
+      } catch {
         return other.getGroupItemFromRootItem(groupAttr, rootItem);
       }
     };
 
     const anyItemToLabel = (attr, item) => {
-      if (me._itemToLabel[attr] && me._itemToLabel[attr][item])
-        return me._itemToLabel[attr][item];
-      else if (other._itemToLabel[attr] && other._itemToLabel[attr][item])
+      if (me._itemToLabel[attr]?.[item]) return me._itemToLabel[attr][item];
+      if (other._itemToLabel[attr]?.[item])
         return other._itemToLabel[attr][item];
-      else return item;
+      return item;
     };
 
     // Create union and merge groups.
@@ -314,7 +311,7 @@ class GenericDimension extends AbstractDimension {
           (rootItem) => anyItemToGroup(groupAttr, rootItem),
           (groupItem) => anyItemToLabel(groupAttr, groupItem),
         );
-      } catch (e) {}
+      } catch {}
 
     return dimension;
   }
@@ -328,7 +325,7 @@ class GenericDimension extends AbstractDimension {
       rootAttribute = otherDimension._rootAttribute;
     else if (otherDimension.attributes.includes(this._rootAttribute))
       rootAttribute = this._rootAttribute;
-    else throw new Error(`The dimensions are not compatible`);
+    else throw new Error('The dimensions are not compatible');
 
     const otherItems = otherDimension.getItems(rootAttribute);
     const commonItems = this.getItems(rootAttribute).filter((i) =>
@@ -340,8 +337,9 @@ class GenericDimension extends AbstractDimension {
 
   _getOrCall(objfun, param) {
     if (!objfun) return param;
-    else if (typeof objfun == 'function') return objfun(param);
-    else return objfun[param];
+    // biome-ignore lint/suspicious/noDoubleEquals: n/a
+    if (typeof objfun == 'function') return objfun(param);
+    return objfun[param];
   }
 }
 

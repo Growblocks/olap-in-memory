@@ -233,6 +233,7 @@ class Cube {
   }
 
   renameMeasure(oldMeasureId, newMeasureId) {
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (oldMeasureId == newMeasureId) return;
 
     if (this.computedMeasures[oldMeasureId]) {
@@ -410,6 +411,7 @@ class Cube {
   }
 
   getNestedObject(measureId, withTotals = false) {
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (!withTotals || this.dimensions.length == 0) {
       const data = this.getData(measureId);
       const statusMap = this.getStatusMap(measureId);
@@ -430,6 +432,7 @@ class Cube {
   }
 
   getNestedObjects(measureIds, withTotals = false) {
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (!withTotals || this.dimensions.length == 0) {
       return measureIds.reduce((acc, measureId) => {
         const data = this.getData(measureId);
@@ -719,7 +722,7 @@ class Cube {
     let compatibleCube;
     try {
       compatibleCube = otherCube.reshape(this.dimensions);
-    } catch (e) {
+    } catch {
       return;
     }
 
@@ -801,6 +804,7 @@ class Cube {
       start,
       end,
     );
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
       return this;
     }
@@ -825,6 +829,7 @@ class Cube {
       items,
       reorder,
     );
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
       return this;
     }
@@ -954,6 +959,7 @@ class Cube {
 
     const newDimensions = this.dimensions.slice();
     newDimensions[dimIdx] = newDimensions[dimIdx].drillDown(attribute);
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) return this;
 
     const newCube = new Cube(newDimensions);
@@ -982,14 +988,10 @@ class Cube {
 
     const newDimensions = this.dimensions.slice();
     newDimensions[dimIdx] = newDimensions[dimIdx].drillUp(attribute);
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
-      console.log(
-        'drillUp: no such attribute: ' +
-          attribute +
-          ' in dimension: ' +
-          dimensionId +
-          ' in cube: ' +
-          this.dimensions.map((d) => d.id).join(', '),
+      console.info(
+        `drillUp: no such attribute: ${attribute} in dimension: ${dimensionId} in cube: ${this.dimensions.map((d) => d.id).join(', ')}`,
       );
       return this;
     }
@@ -1160,6 +1162,7 @@ class Cube {
 
   static deserializeFromBase64String(serializedBase64) {
     const buffer = Buffer.from(serializedBase64, 'base64');
+    // biome-ignore lint/complexity/noThisInStatic: <explanation>
     return this.deserialize(toArrayBuffer(buffer));
   }
 }
