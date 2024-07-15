@@ -43,7 +43,8 @@
         "noUnusedVariables": "error"
       },
       "style": {
-        "useEnumInitializers": "off"
+        "useEnumInitializers": "off",
+        "noParameterAssign": "off"
       }
     }
   }
