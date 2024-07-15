@@ -29,19 +29,19 @@ class AbstractDimension {
     this._itemsToIdx = {};
   }
 
-  getItems(attribute = null) {
+  getItems(_attribute = null) {
     throw new Error('Override me');
   }
 
-  drillUp(newAttribute) {
+  drillUp(_newAttribute) {
     throw new Error('Override me');
   }
 
-  dice(attribute, items, reorder = false) {
+  dice(_attribute, _items, _reorder = false) {
     throw new Error('Override me');
   }
 
-  diceRange(attribute, start, end) {
+  diceRange(_attribute, _start, _end) {
     throw new Error('Override me');
   }
 
@@ -51,7 +51,7 @@ class AbstractDimension {
     return result === undefined ? -1 : result;
   }
 
-  getGroupIndexFromRootIndex(groupAttr, rootIndex) {
+  getGroupIndexFromRootIndex(_groupAttr, _rootIndex) {
     throw new Error('Override me');
   }
 

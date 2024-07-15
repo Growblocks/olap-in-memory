@@ -73,6 +73,7 @@ class TimeDimension extends AbstractDimension {
   }
 
   drillUp(newAttribute) {
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newAttribute == this.rootAttribute) return this;
 
     return new TimeDimension(
@@ -85,6 +86,7 @@ class TimeDimension extends AbstractDimension {
   }
 
   drillDown(newAttribute) {
+    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newAttribute == this.rootAttribute) return this;
 
     if (!TimeSlot.upperSlots[newAttribute].includes(this._rootAttribute)) {
@@ -135,6 +137,7 @@ class TimeDimension extends AbstractDimension {
       return this;
     }
 
+    // biome-ignore lint/style/useSingleVarDeclarator: <explanation>
     let newStart, newEnd;
 
     if (start) {
@@ -204,7 +207,7 @@ class TimeDimension extends AbstractDimension {
       rootAttribute = otherDimension._rootAttribute;
     else if (otherDimension.attributes.includes(this.rootAttribute))
       rootAttribute = this._rootAttribute;
-    else throw new Error(`The dimensions are not compatible`);
+    else throw new Error('The dimensions are not compatible');
 
     const start =
       this._start.value < otherDimension._start.value
@@ -227,13 +230,15 @@ class TimeDimension extends AbstractDimension {
         this._start.value,
         this._end.value,
       );
-    else if (otherDimension.attributes.includes(this.rootAttribute))
+
+    if (otherDimension.attributes.includes(this.rootAttribute))
       return this.diceRange(
         'day',
         otherDimension._start.value,
         otherDimension._end.value,
       );
-    else throw new Error(`The dimensions are not compatible`);
+
+    throw new Error('The dimensions are not compatible');
   }
 }
 

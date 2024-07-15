@@ -53,7 +53,7 @@ class InMemoryStore {
   ) {
     this._size = size;
     this._type = type;
-    if (!isNaN(defaultValue) && defaultValue !== 0)
+    if (!Number.isNaN(defaultValue) && defaultValue !== 0)
       throw new Error('Invalid default value, only NaN and 0 are supported');
 
     if (!['int32', 'uint32', 'float32', 'float64'].includes(type))
@@ -333,7 +333,13 @@ class InMemoryStore {
     return newStore;
   }
 
-  drillDown(oldDimensions, newDimensions, method = 'sum', distributions) {
+  drillDown(
+    oldDimensions,
+    newDimensions,
+    method = 'sum',
+    distributions = null,
+  ) {
+    // biome-ignore lint/suspicious/noDoubleEquals: n/a
     const useRounding = this._type == 'int32' || this._type == 'uint32';
     const oldSize = this._size;
     const newSize = newDimensions.reduce((m, d) => m * d.numItems, 1);
@@ -389,7 +395,7 @@ class InMemoryStore {
           Math.floor(newIdx / (newSize / sharedDimSize)) * addedDimLength +
           (newIdx % addedDimLength);
         if (distributions[distIndex] == null)
-          throw new Error('distribution missing for index ' + distIndex);
+          throw new Error(`distribution missing for index ${distIndex}`);
 
         newStore.setValue(newIdx, oldValue * distributions[distIndex]);
       } else {

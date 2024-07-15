@@ -18,7 +18,7 @@ class GenericDimension extends AbstractDimension {
     // 	parity: ['even', 'odd']
     // }
     this._items = {};
-    this._items['all'] = ['all'];
+    this._items.all = ['all'];
     this._items[rootAttribute] = items;
 
     // Mappings from all attributes to default one
@@ -27,15 +27,16 @@ class GenericDimension extends AbstractDimension {
     // 	parity: [0, 1, 0, 1] <- this._attributeMappings.parity[3 ('2012')] == 0 ('even')
     // }
     this._rootIdxToGroupIdx = {};
-    this._rootIdxToGroupIdx['all'] = new Uint32Array(items.length); // everything points to item 0
+    this._rootIdxToGroupIdx.all = new Uint32Array(items.length); // everything points to item 0
     this._rootIdxToGroupIdx[rootAttribute] = new Uint32Array(
       items.map((item, index) => index),
     );
 
     // Mapping for labels
     this._itemToLabel = {};
-    this._itemToLabel['all'] = { all: 'All' };
+    this._itemToLabel.all = { all: 'All' };
     this._itemToLabel[rootAttribute] = {};
+    // biome-ignore lint/complexity/noForEach: n/a
     items.forEach((item) => {
       this._itemToLabel[rootAttribute][item] = this._getOrCall(
         itemToLabelMap,
@@ -174,6 +175,7 @@ class GenericDimension extends AbstractDimension {
       const mapping = {};
 
       for (let i = 0; i < rootItems.length; ++i) {
+        // biome-ignore lint/style/useSingleVarDeclarator: n/a
         const childItem = childItems[childMapping[i]],
           newItem = newItems[newMapping[i]];
 
