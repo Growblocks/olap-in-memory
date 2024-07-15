@@ -10,7 +10,7 @@ module.exports = {
   },
 
   // TODO: utilize statusMap
-  toNestedArray(values, statusMap, dimensions) {
+  toNestedArray(values, _statusMap, dimensions) {
     // numDimensions == 0
 
     if (dimensions.length === 0) {
