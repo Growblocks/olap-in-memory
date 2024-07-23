@@ -8,7 +8,7 @@
 	"types": "src/index.d.ts",
 	"repository": "https://github.com/Growblocks/olap-in-memory.git",
 	"dependencies": {
-		"@growblocks/expr-eval": "https://github.com/Growblocks/expr-eval#72b5e1632b4d2c289fcb7d05a4d44e302bf0b5ab",
+		"@growblocks/expr-eval": "https://github.com/Growblocks/expr-eval#tag=v2.0.6",
 		"lodash.clonedeep": "^4.5.0",
 		"lodash.merge": "^4.6.2",
 		"timeslot-dag": "^2.2.0"
