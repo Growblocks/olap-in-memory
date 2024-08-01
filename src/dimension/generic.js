@@ -174,8 +174,8 @@ class GenericDimension extends AbstractDimension {
       const mapping = {};
 
       for (let i = 0; i < rootItems.length; ++i) {
-        const childItem = childItems[childMapping[i]],
-          newItem = newItems[newMapping[i]];
+        const childItem = childItems[childMapping[i]];
+        const newItem = newItems[newMapping[i]];
 
         // Not possible to build this attribute (no clean cut on the graph)
         if (mapping[newItem] && mapping[newItem] !== childItem) continue ol;
@@ -195,21 +195,22 @@ class GenericDimension extends AbstractDimension {
   }
 
   dice(attribute, items, reorder = false) {
-    let oldItems = this._items[this._rootAttribute],
-      newItems = null;
+    const oldItems = this._items[this._rootAttribute];
+    let newItems = null;
 
     if (this._rootAttribute === attribute) {
       if (reorder) newItems = items.filter((i) => oldItems.includes(i));
       else newItems = oldItems.filter((i) => items.includes(i));
     } else {
-      if (reorder)
+      if (reorder) {
         // because it does not make sense.
         throw new Error('Reordering is not allowed when using groups');
-      else
-        newItems = oldItems.filter((i) => {
-          const groupItem = this.getGroupItemFromRootItem(attribute, i);
-          return items.includes(groupItem);
-        });
+      }
+
+      newItems = oldItems.filter((i) => {
+        const groupItem = this.getGroupItemFromRootItem(attribute, i);
+        return items.includes(groupItem);
+      });
     }
 
     // return this if the dice does not change the dimension
@@ -257,8 +258,8 @@ class GenericDimension extends AbstractDimension {
       throw new Error('not the same dimension');
 
     // Choose rootAttribute
-    let me = this,
-      other = otherDimension;
+    let me = this;
+    let other = otherDimension;
     if (this.attributes.includes(otherDimension._rootAttribute))
       me = me.drillUp(otherDimension._rootAttribute);
     else if (otherDimension.attributes.includes(this._rootAttribute))

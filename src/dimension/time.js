@@ -137,7 +137,8 @@ class TimeDimension extends AbstractDimension {
       return this;
     }
 
-    let newStart, newEnd;
+    let newStart;
+    let newEnd;
 
     if (start) {
       const startTs = TimeSlot.fromValue(start);

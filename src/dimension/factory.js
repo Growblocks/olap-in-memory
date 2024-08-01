@@ -5,7 +5,9 @@ const { fromBuffer } = require('../serialization');
 module.exports = {
   deserialize(buffer) {
     const data = fromBuffer(buffer);
+
     if (data.start) return TimeDimension.deserialize(buffer);
-    else return GenericDimension.deserialize(buffer);
+
+    return GenericDimension.deserialize(buffer);
   },
 };

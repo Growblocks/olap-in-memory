@@ -30,14 +30,19 @@ class CatchAll extends AbstractDimension {
   }
 
   drillDown(newAttribute) {
-    if (this.childDimension) return this.childDimension.drillUp(newAttribute);
-    else throw new Error('Must set child dimension.');
+    if (this.childDimension) {
+      return this.childDimension.drillUp(newAttribute);
+    }
+
+    throw new Error('Must set child dimension.');
   }
 
   dice(attribute, items, _reorder = false) {
-    if (attribute === this.rootAttribute && items.includes('_total'))
+    if (attribute === this.rootAttribute && items.includes('_total')) {
       return this;
-    else throw new Error('Unsupported');
+    }
+
+    throw new Error('Unsupported');
   }
 
   diceRange(_attribute, _start, _end) {

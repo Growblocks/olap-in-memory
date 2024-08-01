@@ -96,11 +96,13 @@ function fromBuffer(buffer, offset = 0) {
   if (header === ARRAY_BUFFER) {
     const size = new Uint32Array(buffer, offset + 4, 1)[0];
     return buffer.slice(offset + 8, offset + 8 + size);
-  } else if (header === TYPED_ARRAY) {
+  }
+  if (header === TYPED_ARRAY) {
     const typeIndex = new Uint32Array(buffer, offset + 4, 1)[0];
     const payload = fromBuffer(buffer, offset + 8);
     return new TypedArraySubClasses[typeIndex](payload);
-  } else if (header === ARRAY) {
+  }
+  if (header === ARRAY) {
     const size = new Uint32Array(buffer, offset + 4, 1)[0];
     const result = [];
 
@@ -114,16 +116,21 @@ function fromBuffer(buffer, offset = 0) {
     }
 
     return result;
-  } else if (header === STRING) {
+  }
+  if (header === STRING) {
     const payload = fromBuffer(buffer, offset + 4);
     return new TextDecoder().decode(payload);
-  } else if (header === NULL) {
+  }
+  if (header === NULL) {
     return null;
-  } else if (header === NUMBER) {
+  }
+  if (header === NUMBER) {
     return new Float32Array(buffer, offset + 4, 1)[0];
-  } else if (header === BOOLEAN) {
+  }
+  if (header === BOOLEAN) {
     return new Float32Array(buffer, offset + 4, 1)[0] === 1;
-  } else if (header === OBJECT) {
+  }
+  if (header === OBJECT) {
     const result = {};
     fromBuffer(buffer, offset + 4).forEach((entry) => {
       result[entry[0]] = fromBuffer(entry[1]);

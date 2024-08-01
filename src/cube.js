@@ -324,9 +324,11 @@ class Cube {
   }
 
   getData(measureId) {
-    if (this.storedMeasures[measureId] !== undefined)
+    if (this.storedMeasures[measureId] !== undefined) {
       return this.storedMeasures[measureId].data;
-    else if (this.computedMeasures[measureId] !== undefined) {
+    }
+
+    if (this.computedMeasures[measureId] !== undefined) {
       const storeSize = this.storeSize;
       const params = {};
 
@@ -358,13 +360,17 @@ class Cube {
       }
 
       return result;
-    } else throw new Error(`getData: no such measure ${measureId}`);
+    }
+
+    throw new Error(`getData: no such measure ${measureId}`);
   }
 
   getStatusMap(measureId) {
     if (this.storedMeasures[measureId] !== undefined) {
       return this.storedMeasures[measureId]._dataMap;
-    } else if (this.computedMeasures[measureId] !== undefined) {
+    }
+
+    if (this.computedMeasures[measureId] !== undefined) {
       const result = new Map();
       for (const storedMeasureId in this.storedMeasures) {
         const dataMap = this.storedMeasures[storedMeasureId]._dataMap;
@@ -377,7 +383,9 @@ class Cube {
           );
       }
       return result;
-    } else throw new Error(`getStatusMap: no such measure ${measureId}`);
+    }
+
+    throw new Error(`getStatusMap: no such measure ${measureId}`);
   }
 
   fillData(measureId, value) {
@@ -510,9 +518,11 @@ class Cube {
 
     const position = this.getPosition(coords);
 
-    if (this.storedMeasures[measureId] !== undefined)
+    if (this.storedMeasures[measureId] !== undefined) {
       return this.storedMeasures[measureId].getValue(position);
-    else if (this.computedMeasures[measureId] !== undefined) {
+    }
+
+    if (this.computedMeasures[measureId] !== undefined) {
       const measures = this.computedMeasures[measureId].variables({
         withMembers: true,
       });
@@ -1023,9 +1033,15 @@ class Cube {
     const newDimensions = this.dimensions.reduce((m, myDimension) => {
       const otherDimension = otherCube.getDimension(myDimension.id);
 
-      if (!otherDimension) return m;
-      else if (union) return [...m, myDimension.union(otherDimension)];
-      else return [...m, myDimension.intersect(otherDimension)];
+      if (!otherDimension) {
+        return m;
+      }
+
+      if (union) {
+        return [...m, myDimension.union(otherDimension)];
+      }
+
+      return [...m, myDimension.intersect(otherDimension)];
     }, []);
 
     const newCube = new Cube(newDimensions);
@@ -1094,7 +1110,9 @@ class Cube {
 
       if (actualDim.rootAttribute === targetDim.rootAttribute) {
         continue;
-      } else if (actualDim.attributes.includes(targetDim.rootAttribute)) {
+      }
+
+      if (actualDim.attributes.includes(targetDim.rootAttribute)) {
         newCube = newCube.drillUp(targetDim.id, targetDim.rootAttribute);
       } else if (targetDim.attributes.includes(actualDim.rootAttribute)) {
         newCube = newCube.drillDown(targetDim.id, targetDim.rootAttribute);
