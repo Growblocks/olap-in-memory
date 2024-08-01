@@ -22,23 +22,23 @@ function toNestedObjectRec(values, statusMap, dimensions, dimOffset, offset) {
 
 module.exports = {
   fromNestedObject(value, dimensions) {
-    value = [value];
+    let returnValue = [value];
 
     for (let i = 0; i < dimensions.length; ++i) {
-      const dimItems = dimensions[i].getItems(),
-        newValue = new Array(value.length * dimensions[i].numItems);
+      const dimItems = dimensions[i].getItems();
+      const newValue = new Array(returnValue.length * dimensions[i].numItems);
 
       for (let j = 0; j < newValue.length; ++j) {
-        const chunkIndex = Math.floor(j / dimItems.length),
-          dimItem = dimItems[j % dimItems.length];
+        const chunkIndex = Math.floor(j / dimItems.length);
+        const dimItem = dimItems[j % dimItems.length];
 
-        newValue[j] = value[chunkIndex][dimItem];
+        newValue[j] = returnValue[chunkIndex][dimItem];
       }
 
-      value = newValue;
+      returnValue = newValue;
     }
 
-    return value;
+    return returnValue;
   },
 
   toNestedObject(values, statusMap, dimensions) {

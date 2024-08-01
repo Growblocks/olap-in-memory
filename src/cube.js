@@ -914,17 +914,17 @@ class Cube {
     distributions = {},
   ) {
     // If index is not provided, we append the dimension
-    index = index === null ? this.dimensions.length : index;
+    const workingIndex = index === null ? this.dimensions.length : index;
 
     const oldDimensions = this.dimensions.slice();
     oldDimensions.splice(
-      index,
+      workingIndex,
       0,
       new CatchAllDimension(newDimension.id, newDimension),
     );
 
     const newDimensions = oldDimensions.slice();
-    newDimensions[index] = newDimension;
+    newDimensions[workingIndex] = newDimension;
 
     const newCube = new Cube(newDimensions);
     Object.assign(newCube.computedMeasures, this.computedMeasures);

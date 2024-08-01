@@ -1,12 +1,13 @@
 module.exports = {
   fromNestedArray(values, dimensions) {
     const numSteps = dimensions.length - 1;
+    let returnValue = values;
 
     for (let i = 0; i < numSteps; ++i) {
-      values = [].concat(...values);
+      returnValue = [].concat(...values);
     }
 
-    return values;
+    return returnValue;
   },
 
   // TODO: utilize statusMap
@@ -17,6 +18,8 @@ module.exports = {
       return values[0];
     }
 
+    let returnValue = values;
+
     // numDimensions >= 1
     for (let i = dimensions.length - 1; i > 0; --i) {
       const chunkSize = dimensions[i].numItems;
@@ -26,9 +29,9 @@ module.exports = {
         newValues[j] = values.slice(j * chunkSize, j * chunkSize + chunkSize);
       }
 
-      values = newValues;
+      returnValue = newValues;
     }
 
-    return values;
+    return returnValue;
   },
 };

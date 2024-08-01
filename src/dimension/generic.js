@@ -117,11 +117,11 @@ class GenericDimension extends AbstractDimension {
   }
 
   getEntries(attribute = null) {
-    attribute = attribute || this._rootAttribute;
+    const workingAttribute = attribute || this._rootAttribute;
 
-    return this._items[attribute].map((item) => [
+    return this._items[workingAttribute].map((item) => [
       item,
-      this._itemToLabel[attribute][item],
+      this._itemToLabel[workingAttribute][item],
     ]);
   }
 

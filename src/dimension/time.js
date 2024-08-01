@@ -49,20 +49,20 @@ class TimeDimension extends AbstractDimension {
   getItems(attribute = null) {
     if (this._start.value > this._end.value) return [];
 
-    attribute = attribute || this._rootAttribute;
+    const useableAttribute = attribute || this._rootAttribute;
 
-    if (!this._items[attribute]) {
-      const end = this._end.toParentPeriodicity(attribute);
-      let period = this._start.toParentPeriodicity(attribute);
+    if (!this._items[useableAttribute]) {
+      const end = this._end.toParentPeriodicity(useableAttribute);
+      let period = this._start.toParentPeriodicity(useableAttribute);
 
-      this._items[attribute] = [period.value];
+      this._items[useableAttribute] = [period.value];
       while (period.value < end.value) {
         period = period.next();
-        this._items[attribute].push(period.value);
+        this._items[useableAttribute].push(period.value);
       }
     }
 
-    return this._items[attribute];
+    return this._items[useableAttribute];
   }
 
   getEntries(attribute = null, language = 'en') {
@@ -106,10 +106,12 @@ class TimeDimension extends AbstractDimension {
     if (items.length === 1)
       return this.diceRange(attribute, items[0], items[0]);
 
+    let workingItems = items;
+
     // if reorder is true, it means we are supposed to keep the order
     // provided in the item list, otherwise we'll keep our chronological order.
     if (!reorder) {
-      items = items.slice().sort();
+      workingItems = workingItems.slice().sort();
     }
 
     // Check that items are ordered, have the good period, and that there are no gaps.
@@ -117,8 +119,8 @@ class TimeDimension extends AbstractDimension {
     if (last.periodicity !== attribute)
       throw new Error('Unsupported: wrong periodicity');
 
-    for (let i = 1; i < items.length; ++i) {
-      const current = TimeSlot.fromValue(items[i]);
+    for (let i = 1; i < workingItems.length; ++i) {
+      const current = TimeSlot.fromValue(workingItems[i]);
       if (
         current.periodicity !== attribute ||
         current.value !== last.next().value
@@ -129,7 +131,11 @@ class TimeDimension extends AbstractDimension {
       last = current;
     }
 
-    return this.diceRange(attribute, items[0], items[items.length - 1]);
+    return this.diceRange(
+      attribute,
+      workingItems[0],
+      workingItems[workingItems.length - 1],
+    );
   }
 
   diceRange(attribute, start, end) {
