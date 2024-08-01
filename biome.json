@@ -7,7 +7,7 @@
     "defaultBranch": "main"
   },
   "files": {
-    "include": ["src", "scripts"]
+    "include": ["src", "test"]
   },
   "formatter": {
     "enabled": true,

@@ -1,243 +1,280 @@
-const assert = require('chai').assert;
+import { assert, it, describe, beforeEach } from 'vitest';
 const createTestCube = require('./helpers/create-test-cube');
 const { Cube, GenericDimension, TimeDimension } = require('../src');
 
-describe('Dimension', function () {
-    describe('addDimension', function () {
-        it('should be able to add generic dimension', function () {
-            const cube = new Cube([new TimeDimension('time', 'month', '2010-01', '2010-02')]);
-            cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', 0);
-            cube.createStoredMeasure('measure2', { time: 'average' }, 'float32', 0);
-            cube.hydrateFromSparseNestedObject('measure1', {
-                '2010-01': 100,
-                '2010-02': 100,
-            });
-            cube.hydrateFromSparseNestedObject('measure2', {
-                '2010-01': 100,
-                '2010-02': 100,
-            });
+describe('Dimension', () => {
+  describe('addDimension', () => {
+    it('should be able to add generic dimension', () => {
+      const cube = new Cube([
+        new TimeDimension('time', 'month', '2010-01', '2010-02'),
+      ]);
+      cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', 0);
+      cube.createStoredMeasure('measure2', { time: 'average' }, 'float32', 0);
+      cube.hydrateFromSparseNestedObject('measure1', {
+        '2010-01': 100,
+        '2010-02': 100,
+      });
+      cube.hydrateFromSparseNestedObject('measure2', {
+        '2010-01': 100,
+        '2010-02': 100,
+      });
 
-            const newDimension = new GenericDimension('location', 'city', [
-                'paris',
-                'madrid',
-                'berlin',
-            ]);
-            const newCube = cube.addDimension(newDimension, {
-                measure1: 'sum',
-                measure2: 'average',
-            });
+      const newDimension = new GenericDimension('location', 'city', [
+        'paris',
+        'madrid',
+        'berlin',
+      ]);
+      const newCube = cube.addDimension(newDimension, {
+        measure1: 'sum',
+        measure2: 'average',
+      });
 
-            assert.deepEqual(
-                newCube.removeDimension('location').getNestedObject('measure1'),
-                cube.getNestedObject('measure1')
-            );
+      assert.deepEqual(
+        newCube.removeDimension('location').getNestedObject('measure1'),
+        cube.getNestedObject('measure1'),
+      );
 
-            assert.deepEqual(
-                newCube.removeDimension('location').getNestedObject('measure2'),
-                cube.getNestedObject('measure2')
-            );
-        });
-
-        it('should be able to add a time dimension', function () {
-            const cube = new Cube([new TimeDimension('time1', 'month', '2010-01', '2010-02')]);
-            cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', 0);
-            cube.createStoredMeasure('measure2', { time: 'average' }, 'float32', 0);
-            cube.hydrateFromSparseNestedObject('measure1', {
-                '2010-01': 100,
-                '2010-02': 100,
-            });
-            cube.hydrateFromSparseNestedObject('measure2', {
-                '2010-01': 100,
-                '2010-02': 100,
-            });
-
-            const newDimension = new TimeDimension(
-                'time2',
-                'week_mon',
-                '2010-W01-mon',
-                '2010-W08-mon'
-            );
-            const newCube = cube.addDimension(newDimension, {
-                measure1: 'sum',
-                measure2: 'average',
-            });
-
-            assert.deepEqual(
-                newCube.removeDimension('time2').getNestedObject('measure1'),
-                cube.getNestedObject('measure1')
-            );
-
-            assert.deepEqual(
-                newCube.removeDimension('time2').getNestedObject('measure2'),
-                cube.getNestedObject('measure2')
-            );
-        });
+      assert.deepEqual(
+        newCube.removeDimension('location').getNestedObject('measure2'),
+        cube.getNestedObject('measure2'),
+      );
     });
 
-    describe('removeDimension', function () {
-        let cube;
+    it('should be able to add a time dimension', () => {
+      const cube = new Cube([
+        new TimeDimension('time1', 'month', '2010-01', '2010-02'),
+      ]);
+      cube.createStoredMeasure('measure1', { time: 'sum' }, 'float32', 0);
+      cube.createStoredMeasure('measure2', { time: 'average' }, 'float32', 0);
+      cube.hydrateFromSparseNestedObject('measure1', {
+        '2010-01': 100,
+        '2010-02': 100,
+      });
+      cube.hydrateFromSparseNestedObject('measure2', {
+        '2010-01': 100,
+        '2010-02': 100,
+      });
 
-        beforeEach(function () {
-            const period = new GenericDimension('period', 'season', ['summer', 'winter']);
-            const location = new GenericDimension('location', 'city', ['paris', 'toledo', 'tokyo']);
+      const newDimension = new TimeDimension(
+        'time2',
+        'week_mon',
+        '2010-W01-mon',
+        '2010-W08-mon',
+      );
+      const newCube = cube.addDimension(newDimension, {
+        measure1: 'sum',
+        measure2: 'average',
+      });
 
-            cube = new Cube([location, period]);
-            for (let agg of ['sum', 'average', 'highest', 'lowest', 'first', 'last']) {
-                cube.createStoredMeasure(
-                    `antennas_${agg}`,
-                    { period: agg, location: agg },
-                    'float32',
-                    0
-                );
-                cube.setNestedArray(`antennas_${agg}`, [
-                    [1, 2],
-                    [4, 8],
-                    [16, 32],
-                ]);
-            }
+      assert.deepEqual(
+        newCube.removeDimension('time2').getNestedObject('measure1'),
+        cube.getNestedObject('measure1'),
+      );
 
-            cube = cube.removeDimension('location');
-        });
+      assert.deepEqual(
+        newCube.removeDimension('time2').getNestedObject('measure2'),
+        cube.getNestedObject('measure2'),
+      );
+    });
+  });
 
-        it('should sum cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_sum'), [21, 42]);
-        });
+  describe('removeDimension', () => {
+    let cube;
 
-        it('should average cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_average'), [21 / 3, 42 / 3]);
-        });
+    beforeEach(() => {
+      const period = new GenericDimension('period', 'season', [
+        'summer',
+        'winter',
+      ]);
+      const location = new GenericDimension('location', 'city', [
+        'paris',
+        'toledo',
+        'tokyo',
+      ]);
 
-        it('should highest cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_highest'), [16, 32]);
-        });
+      cube = new Cube([location, period]);
+      for (let agg of [
+        'sum',
+        'average',
+        'highest',
+        'lowest',
+        'first',
+        'last',
+      ]) {
+        cube.createStoredMeasure(
+          `antennas_${agg}`,
+          { period: agg, location: agg },
+          'float32',
+          0,
+        );
+        cube.setNestedArray(`antennas_${agg}`, [
+          [1, 2],
+          [4, 8],
+          [16, 32],
+        ]);
+      }
 
-        it('should lowest cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_lowest'), [1, 2]);
-        });
-
-        it('should first cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_first'), [1, 2]);
-        });
-
-        it('should last cities', function () {
-            assert.deepEqual(cube.getNestedArray('antennas_last'), [16, 32]);
-        });
-
-        it('should be able to remove a dimension without any values in it', function () {
-            const newDimension = new GenericDimension('location', 'root', [
-                'paris',
-                'madrid',
-                'berlin',
-            ]);
-            const cube = new Cube([
-                newDimension,
-                new TimeDimension('time', 'month', '2010-01', '2010-02'),
-            ]);
-
-            cube.createStoredMeasure('measure1', {}, 'float32', 0);
-
-            assert.deepEqual(cube.getNestedObject('measure1'), {
-                paris: { '2010-01': 0, '2010-02': 0 },
-                madrid: { '2010-01': 0, '2010-02': 0 },
-                berlin: { '2010-01': 0, '2010-02': 0 },
-            });
-
-            assert.deepEqual(cube.removeDimension('location').getNestedObject('measure1'), {
-                '2010-01': 0,
-                '2010-02': 0,
-            });
-        });
-
-        it('should be able to remove a dimension with some values in it', function () {
-            const newDimension = new GenericDimension('location', 'root', [
-                'paris',
-                'madrid',
-                'berlin',
-            ]);
-            const cube = new Cube([
-                newDimension,
-                new TimeDimension('time', 'month', '2010-01', '2010-02'),
-            ]);
-
-            cube.createStoredMeasure('measure1', {}, 'float32', 0);
-
-            cube.hydrateFromSparseNestedObject('measure1', {
-                paris: { '2010-01': 10, '2010-02': 0 },
-                madrid: { '2010-01': 0, '2010-02': 5 },
-                berlin: { '2010-01': 0, '2010-02': 10 },
-            });
-
-            assert.deepEqual(cube.getNestedObject('measure1'), {
-                paris: { '2010-01': 10, '2010-02': 0 },
-                madrid: { '2010-01': 0, '2010-02': 5 },
-                berlin: { '2010-01': 0, '2010-02': 10 },
-            });
-
-            assert.deepEqual(cube.removeDimension('location').getNestedObject('measure1'), {
-                '2010-01': 10,
-                '2010-02': 15,
-            });
-        });
+      cube = cube.removeDimension('location');
     });
 
-    describe('reorderDimensions', function () {
-        let cube;
-
-        beforeEach(function () {
-            cube = createTestCube(true, true);
-        });
-
-        it('should inverse the dimensions', function () {
-            assert.deepEqual(
-                cube.reorderDimensions(['period', 'location']).getNestedArray('antennas'),
-                [
-                    [1, 4, 16],
-                    [2, 8, 32],
-                ]
-            );
-        });
-
-        it('should work with more dimensions', function () {
-            let cube = new Cube([
-                new GenericDimension('dim1', 'item', ['11', '12']),
-                new GenericDimension('dim2', 'item', ['21', '22']),
-                new GenericDimension('dim3', 'item', ['31', '32']),
-            ]);
-
-            cube.createStoredMeasure('main');
-            cube.setData('main', [1, 2, 3, 4, 5, 6, 7, 8]);
-
-            assert.deepEqual(
-                cube.reorderDimensions(['dim1', 'dim2', 'dim3']).getNestedObject('main'),
-                {
-                    11: { 21: { 31: 1, 32: 2 }, 22: { 31: 3, 32: 4 } },
-                    12: { 21: { 31: 5, 32: 6 }, 22: { 31: 7, 32: 8 } },
-                }
-            );
-
-            assert.deepEqual(
-                cube.reorderDimensions(['dim1', 'dim3', 'dim2']).getNestedObject('main'),
-                {
-                    11: { 31: { 21: 1, 22: 3 }, 32: { 21: 2, 22: 4 } },
-                    12: { 31: { 21: 5, 22: 7 }, 32: { 21: 6, 22: 8 } },
-                }
-            );
-
-            assert.deepEqual(
-                cube.reorderDimensions(['dim3', 'dim2', 'dim1']).getNestedObject('main'),
-                {
-                    31: { 21: { 11: 1, 12: 5 }, 22: { 11: 3, 12: 7 } },
-                    32: { 21: { 11: 2, 12: 6 }, 22: { 11: 4, 12: 8 } },
-                }
-            );
-
-            assert.deepEqual(
-                cube.reorderDimensions(['dim3', 'dim1', 'dim2']).getNestedObject('main'),
-                {
-                    31: { 11: { 21: 1, 22: 3 }, 12: { 21: 5, 22: 7 } },
-                    32: { 11: { 21: 2, 22: 4 }, 12: { 21: 6, 22: 8 } },
-                }
-            );
-        });
+    it('should sum cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_sum'), [21, 42]);
     });
+
+    it('should average cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_average'), [
+        21 / 3,
+        42 / 3,
+      ]);
+    });
+
+    it('should highest cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_highest'), [16, 32]);
+    });
+
+    it('should lowest cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_lowest'), [1, 2]);
+    });
+
+    it('should first cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_first'), [1, 2]);
+    });
+
+    it('should last cities', () => {
+      assert.deepEqual(cube.getNestedArray('antennas_last'), [16, 32]);
+    });
+
+    it('should be able to remove a dimension without any values in it', () => {
+      const newDimension = new GenericDimension('location', 'root', [
+        'paris',
+        'madrid',
+        'berlin',
+      ]);
+      const cube = new Cube([
+        newDimension,
+        new TimeDimension('time', 'month', '2010-01', '2010-02'),
+      ]);
+
+      cube.createStoredMeasure('measure1', {}, 'float32', 0);
+
+      assert.deepEqual(cube.getNestedObject('measure1'), {
+        paris: { '2010-01': 0, '2010-02': 0 },
+        madrid: { '2010-01': 0, '2010-02': 0 },
+        berlin: { '2010-01': 0, '2010-02': 0 },
+      });
+
+      assert.deepEqual(
+        cube.removeDimension('location').getNestedObject('measure1'),
+        {
+          '2010-01': 0,
+          '2010-02': 0,
+        },
+      );
+    });
+
+    it('should be able to remove a dimension with some values in it', () => {
+      const newDimension = new GenericDimension('location', 'root', [
+        'paris',
+        'madrid',
+        'berlin',
+      ]);
+      const cube = new Cube([
+        newDimension,
+        new TimeDimension('time', 'month', '2010-01', '2010-02'),
+      ]);
+
+      cube.createStoredMeasure('measure1', {}, 'float32', 0);
+
+      cube.hydrateFromSparseNestedObject('measure1', {
+        paris: { '2010-01': 10, '2010-02': 0 },
+        madrid: { '2010-01': 0, '2010-02': 5 },
+        berlin: { '2010-01': 0, '2010-02': 10 },
+      });
+
+      assert.deepEqual(cube.getNestedObject('measure1'), {
+        paris: { '2010-01': 10, '2010-02': 0 },
+        madrid: { '2010-01': 0, '2010-02': 5 },
+        berlin: { '2010-01': 0, '2010-02': 10 },
+      });
+
+      assert.deepEqual(
+        cube.removeDimension('location').getNestedObject('measure1'),
+        {
+          '2010-01': 10,
+          '2010-02': 15,
+        },
+      );
+    });
+  });
+
+  describe('reorderDimensions', () => {
+    let cube;
+
+    beforeEach(() => {
+      cube = createTestCube(true, true);
+    });
+
+    it('should inverse the dimensions', () => {
+      assert.deepEqual(
+        cube
+          .reorderDimensions(['period', 'location'])
+          .getNestedArray('antennas'),
+        [
+          [1, 4, 16],
+          [2, 8, 32],
+        ],
+      );
+    });
+
+    it('should work with more dimensions', () => {
+      let cube = new Cube([
+        new GenericDimension('dim1', 'item', ['11', '12']),
+        new GenericDimension('dim2', 'item', ['21', '22']),
+        new GenericDimension('dim3', 'item', ['31', '32']),
+      ]);
+
+      cube.createStoredMeasure('main');
+      cube.setData('main', [1, 2, 3, 4, 5, 6, 7, 8]);
+
+      assert.deepEqual(
+        cube
+          .reorderDimensions(['dim1', 'dim2', 'dim3'])
+          .getNestedObject('main'),
+        {
+          11: { 21: { 31: 1, 32: 2 }, 22: { 31: 3, 32: 4 } },
+          12: { 21: { 31: 5, 32: 6 }, 22: { 31: 7, 32: 8 } },
+        },
+      );
+
+      assert.deepEqual(
+        cube
+          .reorderDimensions(['dim1', 'dim3', 'dim2'])
+          .getNestedObject('main'),
+        {
+          11: { 31: { 21: 1, 22: 3 }, 32: { 21: 2, 22: 4 } },
+          12: { 31: { 21: 5, 22: 7 }, 32: { 21: 6, 22: 8 } },
+        },
+      );
+
+      assert.deepEqual(
+        cube
+          .reorderDimensions(['dim3', 'dim2', 'dim1'])
+          .getNestedObject('main'),
+        {
+          31: { 21: { 11: 1, 12: 5 }, 22: { 11: 3, 12: 7 } },
+          32: { 21: { 11: 2, 12: 6 }, 22: { 11: 4, 12: 8 } },
+        },
+      );
+
+      assert.deepEqual(
+        cube
+          .reorderDimensions(['dim3', 'dim1', 'dim2'])
+          .getNestedObject('main'),
+        {
+          31: { 11: { 21: 1, 22: 3 }, 12: { 21: 5, 22: 7 } },
+          32: { 11: { 21: 2, 22: 4 }, 12: { 21: 6, 22: 8 } },
+        },
+      );
+    });
+  });
 });
