@@ -1,4 +1,4 @@
-import { assert, it, describe, beforeEach } from 'vitest';
+import { assert, beforeEach, describe, it } from 'vitest';
 const createTestCube = require('./helpers/create-test-cube');
 
 describe('Filtering', () => {
@@ -46,7 +46,11 @@ describe('Filtering', () => {
 
   describe('dice', () => {
     it('should work on noop', () => {
-      let newCube = cube.dice('location', 'city', ['paris', 'toledo', 'tokyo']);
+      const newCube = cube.dice('location', 'city', [
+        'paris',
+        'toledo',
+        'tokyo',
+      ]);
 
       assert.equal(newCube, cube);
     });

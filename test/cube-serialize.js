@@ -1,4 +1,4 @@
-import { assert, it, describe } from 'vitest';
+import { assert, describe, it } from 'vitest';
 const { Cube, GenericDimension, TimeDimension } = require('../src');
 const { toBuffer, fromBuffer } = require('../src/serialization');
 

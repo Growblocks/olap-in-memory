@@ -1,4 +1,4 @@
-import { assert, it, describe, beforeEach } from 'vitest';
+import { assert, describe, it } from 'vitest';
 const { Cube, GenericDimension, TimeDimension } = require('../src');
 
 describe('Operation between cubes', () => {
@@ -374,7 +374,7 @@ describe('Operation between cubes', () => {
         2,
       ]);
       assert.deepEqual(newCube.getData('safe_sum'), [
-        NaN,
+        Number.NaN,
         Number.NaN,
         Number.NaN,
         Number.NaN,

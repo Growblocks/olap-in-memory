@@ -1,4 +1,4 @@
-import { assert, it, describe, beforeEach } from 'vitest';
+import { assert, beforeEach, describe, it } from 'vitest';
 const createTestCube = require('./helpers/create-test-cube');
 
 describe('Measures', () => {

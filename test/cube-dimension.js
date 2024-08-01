@@ -1,4 +1,4 @@
-import { assert, it, describe, beforeEach } from 'vitest';
+import { assert, beforeEach, describe, it } from 'vitest';
 const createTestCube = require('./helpers/create-test-cube');
 const { Cube, GenericDimension, TimeDimension } = require('../src');
 
@@ -93,7 +93,7 @@ describe('Dimension', () => {
       ]);
 
       cube = new Cube([location, period]);
-      for (let agg of [
+      for (const agg of [
         'sum',
         'average',
         'highest',
@@ -227,7 +227,7 @@ describe('Dimension', () => {
     });
 
     it('should work with more dimensions', () => {
-      let cube = new Cube([
+      const cube = new Cube([
         new GenericDimension('dim1', 'item', ['11', '12']),
         new GenericDimension('dim2', 'item', ['21', '22']),
         new GenericDimension('dim3', 'item', ['31', '32']),

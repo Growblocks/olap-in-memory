@@ -1,4 +1,4 @@
-import { it, describe } from 'vitest';
+import { describe, it } from 'vitest';
 const { GenericDimension } = require('../src');
 const createLargeTestCube = require('./helpers/create-large-test-cube');
 
