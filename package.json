@@ -8,20 +8,22 @@
 	"types": "src/index.d.ts",
 	"repository": "https://github.com/Growblocks/olap-in-memory.git",
 	"dependencies": {
-		"@growblocks/expr-eval": "https://github.com/Growblocks/expr-eval#tag=v2.0.6",
+		"@growblocks/expr-eval": "git+https://github.com/Growblocks/expr-eval#v2.0.6",
 		"lodash.clonedeep": "^4.5.0",
 		"lodash.merge": "^4.6.2",
 		"timeslot-dag": "^2.2.0"
 	},
 	"devDependencies": {
-		"chai": "^4.3.10",
-		"mocha": "^10.2.0",
-		"nyc": "^15.1.0",
-		"semantic-release": "^22.0.5"
+		"@biomejs/biome": "^1.8.3",
+		"@vitest/coverage-v8": "^2.0.5",
+		"semantic-release": "^22.0.5",
+		"vitest": "^2.0.5"
 	},
 	"scripts": {
-		"test": "mocha --parallel --exclude \"**/*-benchmark.js\"",
-		"test:benchmark": "mocha --parallel --exclude \"!**/*-benchmark.js\"",
-		"coverage": "nyc --reporter=lcov npm test"
+		"test": "vitest run --exclude \"**/*-benchmark.js\"",
+		"test:benchmark": "vitest run benchmark",
+		"lint": "biome check",
+		"lint:fix": "biome check --write",
+		"coverage": "vitest run --coverage --exclude \"**/*-benchmark.js\""
 	}
 }
