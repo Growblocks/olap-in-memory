@@ -1,12 +1,13 @@
-const { Cube, GenericDimension } = require('../../src');
+import { Cube } from '../../src/cube.js';
+import { GenericDimension } from '../../src/dimension/generic.js';
 
-module.exports = (
-  numOfDimensions,
-  dimensionSize,
-  numOfMeasures,
+export function createLargeTestCube(
+  numOfDimensions: number,
+  dimensionSize: number,
+  numOfMeasures: number,
   sparseDataRate = 1.0,
   firstMeasureIndex = 0,
-) => {
+) {
   const dimensions = [];
 
   for (let i = 0; i < numOfDimensions; i++) {
@@ -26,7 +27,7 @@ module.exports = (
 
   const sizeToFillDataRandomly = sparseDataRate * cube.storeSize;
 
-  const usedIndexes = {};
+  const usedIndexes: Record<string, boolean> = {};
   for (let i = 0; i < sizeToFillDataRandomly; i++) {
     let currIndex = 0;
 
@@ -37,9 +38,9 @@ module.exports = (
     usedIndexes[currIndex] = true;
 
     cube.storedMeasureIds.forEach((measureId) => {
-      cube.storedMeasures[measureId].setValue(currIndex, 1);
+      cube.storedMeasures[measureId]?.setValue(currIndex, 1);
     });
   }
 
   return cube;
-};
+}

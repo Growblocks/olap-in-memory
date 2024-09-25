@@ -1,6 +1,7 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const createTestCube = require('./helpers/create-test-cube');
-const { Cube, TimeDimension } = require('../src');
+import { Cube } from '../src/cube.js';
+import { TimeDimension } from '../src/dimension/time.js';
+import { createTestCube } from './helpers/create-test-cube.js';
 
 describe('Drilling', () => {
   describe('drillUp', () => {
@@ -24,8 +25,8 @@ describe('Drilling', () => {
     });
 
     describe('With incomplete data (data from feb missing)', () => {
-      let cube;
-      let newCube;
+      let cube: Cube;
+      let newCube: Cube;
 
       beforeEach(() => {
         cube = new Cube([
@@ -140,8 +141,8 @@ describe('Drilling', () => {
     });
 
     describe('quarter to month, incomplete cube', () => {
-      let cube;
-      let newCube;
+      let cube: Cube;
+      let newCube: Cube;
 
       beforeEach(() => {
         cube = new Cube([

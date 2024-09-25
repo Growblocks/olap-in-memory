@@ -1,8 +1,9 @@
 import { describe, it } from 'vitest';
-const { GenericDimension } = require('../src');
-const createLargeTestCube = require('./helpers/create-large-test-cube');
+import { GenericDimension } from '../src/dimension/generic.js';
+import { createLargeTestCube } from './helpers/create-large-test-cube.js';
+import type { Cube } from '../src/cube.js';
 
-function batchRun(func, times = 10) {
+function batchRun(func: () => Cube, times = 10) {
   const results = [];
 
   for (let i = 0; i < times; i++) {

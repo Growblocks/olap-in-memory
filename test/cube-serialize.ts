@@ -1,6 +1,8 @@
 import { assert, describe, it } from 'vitest';
-const { Cube, GenericDimension, TimeDimension } = require('../src');
-const { toBuffer, fromBuffer } = require('../src/serialization');
+import { Cube } from '../src/cube.js';
+import { toBuffer, fromBuffer } from '../src/serialization.js';
+import { GenericDimension } from '../src/dimension/generic.js';
+import { TimeDimension } from '../src/dimension/time.js';
 
 describe('Serialization', () => {
   describe('generic serialization', () => {

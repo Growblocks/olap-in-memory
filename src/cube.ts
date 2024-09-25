@@ -1,37 +1,74 @@
-const merge = require('lodash.merge');
-const TimeSlot = require('timeslot-dag');
-const cloneDeep = require('lodash.clonedeep');
-const DimensionFactory = require('./dimension/factory');
-const CatchAllDimension = require('./dimension/catch-all');
-const { fromNestedArray, toNestedArray } = require('./formatter/nested-array');
-const {
+import merge from 'lodash.merge';
+import TimeSlot from 'timeslot-dag';
+import cloneDeep from 'lodash.clonedeep';
+import {
+  fromNestedArray,
+  toNestedArray,
+  type NestedNumberArray,
+  type NestedNumberObject,
+} from './formatter/nested-array.js';
+import {
   fromNestedObject,
   toNestedObject,
-} = require('./formatter/nested-object');
-const { toBuffer, fromBuffer, toArrayBuffer } = require('./serialization');
-const InMemoryStore = require('./store/in-memory');
-const getParser = require('./parser');
+  type StatusMap,
+} from './formatter/nested-object.js';
+import { toBuffer, fromBuffer, toArrayBuffer } from './serialization.js';
+import type { GenericDimension } from './dimension/generic.js';
+import type { TimeDimension } from './dimension/time.js';
+import { InMemoryStore, type MemoryType } from './store/in-memory.js';
+import type { Expression } from '@growblocks/expr-eval';
+import { CatchAll } from './dimension/catch-all.js';
+import type { TimeSlotPeriodicity } from './dimension/TimeSlotPeriodicity.enum.js';
+import { getParser } from './parser.js';
+import { deserialize } from './dimension/factory.js';
 
-function mapValues(obj, fn) {
-  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, fn(v)]));
+const mapFn = (value: string[]) => {
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return value;
+};
+
+function mapValues(obj: Record<string, string[]>) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => {
+      return [k, mapFn(v)];
+    }),
+  );
 }
 
-function getCombinations(options) {
-  const crossproduct = (xss) =>
+function getCombinations(options: Record<string, string[]>) {
+  const optionsValues = Object.values(options);
+
+  const crossproduct = (xss: string[][]) =>
     xss.reduce(
-      (xs, ys) =>
-        xs.flatMap((x) => {
+      (xs, ys) => {
+        const foo = xs.flatMap((x) => {
           return ys.map((y) => [...x, y]);
-        }),
-      [[]],
+        });
+
+        return foo;
+      },
+      // TODO: See if we can remove this casting.
+      [[]] as string[][],
     );
 
-  return crossproduct(Object.values(options)).map((xs) =>
+  return crossproduct(optionsValues).map((xs) =>
     Object.fromEntries(xs.map((x, i) => [Object.keys(options)[i], x])),
   );
 }
 
-class Cube {
+const filterMeasures = (measureIds: string[], measures: string[]) =>
+  measures.length === 0
+    ? measureIds
+    : measureIds.filter((measureId) => measures.includes(measureId));
+
+export class Cube {
+  dimensions: (CatchAll | GenericDimension | TimeDimension)[];
+  storedMeasures: Record<string, InMemoryStore>;
+  storedMeasuresRules: Record<string, Record<string, string>>;
+  computedMeasures: Record<string, Expression>;
+
   get storeSize() {
     return this.dimensions.reduce((m, d) => m * d.numItems, 1);
   }
@@ -55,46 +92,56 @@ class Cube {
     return Object.keys(this.computedMeasures);
   }
 
-  constructor(dimensions) {
+  constructor(dimensions: (CatchAll | GenericDimension | TimeDimension)[]) {
     this.dimensions = dimensions;
     this.storedMeasures = {};
     this.storedMeasuresRules = {};
     this.computedMeasures = {};
   }
 
-  clone(measures = []) {
+  clone(measures: string[] | undefined = []) {
     const cloneCube = new Cube(cloneDeep(this.dimensions));
 
-    const filterMeasures = (measureIds) =>
-      measures.length === 0
-        ? measureIds
-        : measureIds.filter((measureId) => measures.includes(measureId));
-    const computedMeasuresToCopy = filterMeasures(this.computedMeasureIds);
-    const storedMeasuresToCopy = filterMeasures(this.storedMeasureIds);
+    const computedMeasuresToCopy = filterMeasures(
+      this.computedMeasureIds,
+      measures,
+    );
+    const storedMeasuresToCopy = filterMeasures(
+      this.storedMeasureIds,
+      measures,
+    );
 
     computedMeasuresToCopy.forEach((measureId) => {
-      cloneCube.computedMeasures[measureId] = this.computedMeasures[measureId];
+      if (this.computedMeasures[measureId]) {
+        cloneCube.computedMeasures[measureId] =
+          this.computedMeasures[measureId];
+      }
     });
     storedMeasuresToCopy.forEach((measureId) => {
-      cloneCube.storedMeasures[measureId] =
-        this.storedMeasures[measureId].clone();
-      cloneCube.storedMeasuresRules[measureId] = cloneDeep(
-        this.storedMeasuresRules[measureId],
-      );
+      if (
+        this.storedMeasures[measureId] &&
+        this.storedMeasuresRules[measureId]
+      ) {
+        cloneCube.storedMeasures[measureId] =
+          this.storedMeasures[measureId].clone();
+        cloneCube.storedMeasuresRules[measureId] = cloneDeep(
+          this.storedMeasuresRules[measureId],
+        );
+      }
     });
 
     return cloneCube;
   }
 
-  getDimension(dimensionId) {
+  getDimension(dimensionId: string) {
     return this.dimensions.find((d) => d.id === dimensionId);
   }
 
-  getDimensionIndex(dimensionId) {
+  getDimensionIndex(dimensionId: string) {
     return this.dimensions.findIndex((d) => d.id === dimensionId);
   }
 
-  createComputedMeasure(measureId, formula) {
+  createComputedMeasure(measureId: string, formula: string) {
     if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
       throw new Error(`Invalid measureId: ${measureId}`);
 
@@ -113,7 +160,7 @@ class Cube {
         const regex = new RegExp(`\\b${computedMeasureId}\\b`, 'g');
         if (acc.match(regex)) {
           const expression = this.computedMeasures[computedMeasureId];
-          return acc.replace(regex, `(${expression.toString()})`);
+          return acc.replace(regex, `(${expression?.toString()})`);
         }
         return acc;
       },
@@ -139,7 +186,7 @@ class Cube {
     this.computedMeasures[measureId] = expression;
   }
 
-  copyStoredMeasure(measureId, copyMeasureId) {
+  copyStoredMeasure(measureId: string, copyMeasureId: string) {
     if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(copyMeasureId))
       throw new Error(`Invalid measureId: ${copyMeasureId}`);
 
@@ -152,16 +199,18 @@ class Cube {
     this.storedMeasures[copyMeasureId] = cloneDeep(
       this.storedMeasures[measureId],
     );
-    this.storedMeasuresRules[copyMeasureId] = cloneDeep(
-      this.storedMeasuresRules[measureId],
-    );
+    if (this.storedMeasuresRules[measureId]) {
+      this.storedMeasuresRules[copyMeasureId] = cloneDeep(
+        this.storedMeasuresRules[measureId],
+      );
+    }
   }
 
   createStoredMeasure(
-    measureId,
-    rules = {},
-    type = 'float32',
-    defaultValue = 0,
+    measureId: string,
+    rules: Record<string, string> | undefined = {},
+    type: MemoryType | undefined = 'float32',
+    defaultValue: number | undefined = 0,
   ) {
     if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
       throw new Error(`Invalid measureId: ${measureId}`);
@@ -177,7 +226,7 @@ class Cube {
     this.storedMeasuresRules[measureId] = rules;
   }
 
-  cloneStoredMeasure(originCube, measureId) {
+  cloneStoredMeasure(originCube: Cube, measureId: string) {
     if (!/^[a-z][_a-z0-9]+$|^[_a-z0-9]+__total$/i.test(measureId))
       throw new Error(`Invalid measureId: ${measureId}`);
 
@@ -203,11 +252,11 @@ class Cube {
   }
 
   copyToStoredMeasure(
-    computedMeasureId,
-    storedMeasureId,
-    rules = {},
-    type = 'float32',
-    defaultValue = 0,
+    computedMeasureId: string,
+    storedMeasureId: string,
+    rules: Record<string, string> | undefined = {},
+    type: MemoryType | undefined = 'float32',
+    defaultValue: number | undefined = 0,
   ) {
     const data = this.getData(computedMeasureId);
     this.createStoredMeasure(storedMeasureId, rules, type, defaultValue);
@@ -215,10 +264,10 @@ class Cube {
   }
 
   convertToStoredMeasure(
-    measureId,
-    rules = {},
-    type = 'float32',
-    defaultValue = 0,
+    measureId: string,
+    rules: Record<string, string> | undefined = {},
+    type: MemoryType | undefined = 'float32',
+    defaultValue: number | undefined = 0,
   ) {
     if (!this.computedMeasures[measureId]) {
       throw new Error(
@@ -232,7 +281,7 @@ class Cube {
     this.setData(measureId, data);
   }
 
-  renameMeasure(oldMeasureId, newMeasureId) {
+  renameMeasure(oldMeasureId: string, newMeasureId: string) {
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (oldMeasureId == newMeasureId) return;
 
@@ -241,15 +290,17 @@ class Cube {
       delete this.computedMeasures[oldMeasureId];
     } else if (this.storedMeasures[oldMeasureId]) {
       this.storedMeasures[newMeasureId] = this.storedMeasures[oldMeasureId];
-      this.storedMeasuresRules[newMeasureId] =
-        this.storedMeasuresRules[oldMeasureId];
+      if (this.storedMeasuresRules[oldMeasureId]) {
+        this.storedMeasuresRules[newMeasureId] =
+          this.storedMeasuresRules[oldMeasureId];
+      }
       delete this.storedMeasures[oldMeasureId];
       delete this.storedMeasuresRules[oldMeasureId];
 
       for (const computedMeasureId in this.computedMeasures) {
         const expression = this.computedMeasures[computedMeasureId];
         const regex = new RegExp(`\\b${oldMeasureId}\\b`, 'g');
-        if (expression.toString().match(regex)) {
+        if (expression?.toString().match(regex)) {
           this.computedMeasures[computedMeasureId] = expression.substitute(
             oldMeasureId,
             newMeasureId,
@@ -263,7 +314,7 @@ class Cube {
     }
   }
 
-  replaceStoredMeasure(toKeep, toDrop) {
+  replaceStoredMeasure(toKeep: string, toDrop: string) {
     if (this.storedMeasures[toKeep] === undefined)
       throw new Error(`replaceStoredMeasure: no such measure ${toKeep}`);
 
@@ -273,7 +324,7 @@ class Cube {
     for (const computedMeasureId in this.computedMeasures) {
       const expression = this.computedMeasures[computedMeasureId];
       const regex = new RegExp(`\\b${toDrop}\\b`, 'g');
-      if (expression.toString().match(regex)) {
+      if (expression?.toString().match(regex)) {
         this.computedMeasures[computedMeasureId] = expression.substitute(
           toDrop,
           toKeep,
@@ -284,7 +335,7 @@ class Cube {
     this.dropMeasure(toDrop);
   }
 
-  dropMeasure(measureId) {
+  dropMeasure(measureId: string) {
     if (this.computedMeasures[measureId] !== undefined) {
       delete this.computedMeasures[measureId];
     } else if (this.storedMeasures[measureId] !== undefined) {
@@ -292,7 +343,7 @@ class Cube {
       delete this.storedMeasuresRules[measureId];
       Object.keys(this.computedMeasures).forEach((computedMeasureId) => {
         const expression = this.computedMeasures[computedMeasureId];
-        if (expression.variables().includes(measureId)) {
+        if (expression?.variables().includes(measureId)) {
           delete this.computedMeasures[computedMeasureId];
         }
       });
@@ -301,36 +352,40 @@ class Cube {
     }
   }
 
-  dropMeasures(measureIds) {
+  dropMeasures(measureIds: string[]) {
     measureIds.forEach((measureId) => this.dropMeasure(measureId));
   }
 
-  keepMeasure(measureId) {
+  keepMeasure(measureId: string) {
     [...this.computedMeasureIds, ...this.storedMeasureIds]
       .filter((id) => id !== measureId)
       .forEach((id) => this.dropMeasure(id));
   }
 
-  keepMeasures(measureIds) {
+  keepMeasures(measureIds: string[]) {
     [...this.computedMeasureIds, ...this.storedMeasureIds]
       .filter((id) => !measureIds.includes(id))
       .forEach((id) => this.dropMeasure(id));
   }
 
   collapse() {
-    return this.dimensionIds.reduce((acc, curr) => {
+    // @ts-ignore See if this is simple to fix in future.
+    const collapsedCube = this.dimensionIds.reduce((acc, curr) => {
+      // @ts-ignore Figure out if `TimeSlotPeriodicity` is the correct type
       return acc.slice(curr, 'all', 'all');
     }, this);
+
+    return collapsedCube;
   }
 
-  getData(measureId) {
+  getData(measureId: string): number[] {
     if (this.storedMeasures[measureId] !== undefined) {
       return this.storedMeasures[measureId].data;
     }
 
     if (this.computedMeasures[measureId] !== undefined) {
       const storeSize = this.storeSize;
-      const params = {};
+      const params: Record<string, number> = {};
 
       // Collect needed measures
       const measures = this.computedMeasures[measureId].variables({
@@ -343,8 +398,11 @@ class Cube {
       measures
         .filter((measureId) => measureId.includes('__total'))
         .forEach((measureId) => {
-          params[measureId] =
-            this.storedMeasures[measureId.replace('__total', '')].total;
+          const storedItem =
+            this.storedMeasures[measureId.replace('__total', '')]?.total;
+          if (storedItem) {
+            params[measureId] = storedItem;
+          }
         });
 
       // Fill result array
@@ -352,8 +410,13 @@ class Cube {
 
       for (let i = 0; i < storeSize; ++i) {
         for (let j = 0; j < storedMeasures.length; ++j) {
-          params[storedMeasures[j]] =
-            this.storedMeasures[storedMeasures[j]].getValue(i);
+          const storedMeasureItem = storedMeasures[j];
+          if (storedMeasureItem) {
+            const value = this.storedMeasures[storedMeasureItem]?.getValue(i);
+            if (typeof value === 'number') {
+              params[storedMeasureItem] = value;
+            }
+          }
         }
 
         result[i] = this.computedMeasures[measureId].evaluate(params);
@@ -365,7 +428,7 @@ class Cube {
     throw new Error(`getData: no such measure ${measureId}`);
   }
 
-  getStatusMap(measureId) {
+  getStatusMap(measureId: string): StatusMap {
     if (this.storedMeasures[measureId] !== undefined) {
       return this.storedMeasures[measureId]._dataMap;
     }
@@ -373,7 +436,8 @@ class Cube {
     if (this.computedMeasures[measureId] !== undefined) {
       const result = new Map();
       for (const storedMeasureId in this.storedMeasures) {
-        const dataMap = this.storedMeasures[storedMeasureId]._dataMap;
+        const dataMap =
+          this.storedMeasures[storedMeasureId]?._dataMap ?? new Map();
         for (const key of dataMap.keys())
           result.set(
             key,
@@ -388,7 +452,7 @@ class Cube {
     throw new Error(`getStatusMap: no such measure ${measureId}`);
   }
 
-  fillData(measureId, value) {
+  fillData(measureId: string, value: number) {
     if (this.storedMeasures[measureId]) {
       this.storedMeasures[measureId].fill(value);
     } else
@@ -397,7 +461,7 @@ class Cube {
       );
   }
 
-  setData(measureId, values) {
+  setData(measureId: string, values: [number, number][] | number[]) {
     if (this.storedMeasures[measureId]) {
       this.storedMeasures[measureId].data = values;
     } else
@@ -406,32 +470,39 @@ class Cube {
       );
   }
 
-  getNestedArray(measureId) {
+  getNestedArray(measureId: string) {
     const data = this.getData(measureId);
     const statusMap = this.getStatusMap(measureId);
 
+    // @ts-ignore We are ignoring the `CatchAll` class here...
     return toNestedArray(data, statusMap, this.dimensions);
   }
 
-  setNestedArray(measureId, values) {
+  setNestedArray(measureId: string, values: NestedNumberArray) {
+    // @ts-ignore We are ignoring the `CatchAll` class here...
     const data = fromNestedArray(values, this.dimensions);
     this.setData(measureId, data);
   }
 
-  getNestedObject(measureId, withTotals = false) {
+  getNestedObject(measureId: string, withTotals: boolean | undefined = false) {
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (!withTotals || this.dimensions.length == 0) {
       const data = this.getData(measureId);
       const statusMap = this.getStatusMap(measureId);
+      // @ts-ignore We are ignoring the `CatchAll` class here...
       return toNestedObject(data, statusMap, this.dimensions);
     }
 
     const result = {};
     for (let j = 0; j < 2 ** this.dimensions.length; ++j) {
-      let subCube = this;
+      let subCube: Cube = this;
       for (let i = 0; i < this.dimensions.length; ++i)
-        if (j & (1 << i))
-          subCube = subCube.drillUp(this.dimensions[i].id, 'all');
+        if (j & (1 << i)) {
+          if (this.dimensions[i]) {
+            // @ts-ignore We are ignoring the `CatchAll` class here and the `TimeSlotPeriodicity` type...
+            subCube = subCube.drillUp(this.dimensions[i].id, 'all');
+          }
+        }
 
       merge(result, subCube.getNestedObject(measureId, false));
     }
@@ -439,24 +510,36 @@ class Cube {
     return result;
   }
 
-  getNestedObjects(measureIds, withTotals = false) {
-    // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
-    if (!withTotals || this.dimensions.length == 0) {
-      return measureIds.reduce((acc, measureId) => {
+  // TODO: Make this not unknown return type...
+  getNestedObjects(
+    measureIds: string[],
+    withTotals: boolean | undefined = false,
+  ) {
+    if (!withTotals || this.dimensions.length === 0) {
+      return measureIds.reduce<Record<string, unknown>>((acc, measureId) => {
         const data = this.getData(measureId);
         const statusMap = this.getStatusMap(measureId);
 
-        acc[measureId] = toNestedObject(data, statusMap, this.dimensions);
+        // @ts-ignore We are ignoring the `CatchAll` class here...
+        const val = toNestedObject(data, statusMap, this.dimensions);
+        if (val && acc[measureId]) {
+          acc[measureId] = val;
+        }
         return acc;
       }, {});
     }
 
-    const result = {};
+    const result: Record<string, unknown> = {};
     for (let j = 0; j < 2 ** this.dimensions.length; ++j) {
-      let subCube = this;
+      let subCube: Cube = this;
       for (let i = 0; i < this.dimensions.length; ++i)
-        if (j & (1 << i))
-          subCube = subCube.drillUp(this.dimensions[i].id, 'all');
+        if (j & (1 << i)) {
+          const dimId = this.dimensions[i]?.id;
+          if (dimId) {
+            // @ts-ignore Ensure correct type for `TimeSlotPeriodicity`
+            subCube = subCube.drillUp(dimId, 'all');
+          }
+        }
 
       merge(result, subCube.getNestedObjects(measureIds, false));
     }
@@ -464,33 +547,56 @@ class Cube {
     return result;
   }
 
-  setNestedObject(measureId, value) {
+  setNestedObject(measureId: string, value: NestedNumberObject) {
+    // @ts-ignore We are ignoring the `CatchAll` class here...
     const data = fromNestedObject(value, this.dimensions);
+    // @ts-ignore TODO: figure out return type of fromNestedObject
     this.setData(measureId, data);
   }
 
-  hydrateFromSparseNestedObject(measureId, obj, offset = 0, dimOffset = 0) {
-    if (dimOffset === this.dimensions.length) {
-      this.storedMeasures[measureId].setValue(offset, obj);
+  hydrateFromSparseNestedObject(
+    measureId: string,
+    obj: number | NestedNumberObject,
+    offset: number | undefined = 0,
+    dimOffset: number | undefined = 0,
+  ) {
+    if (dimOffset === this.dimensions.length && typeof obj === 'number') {
+      this.storedMeasures[measureId]?.setValue(offset, obj);
       return;
+    }
+
+    if (typeof obj === 'number') {
+      throw new Error("Invalid object type. Expected 'object', got 'number'");
     }
 
     const dimension = this.dimensions[dimOffset];
     for (const key in obj) {
-      const itemOffset = dimension.getRootIndexFromRootItem(key);
-      if (itemOffset !== -1) {
-        const newOffset = offset * dimension.numItems + itemOffset;
-        this.hydrateFromSparseNestedObject(
-          measureId,
-          obj[key],
-          newOffset,
-          dimOffset + 1,
-        );
+      const itemOffset = dimension?.getRootIndexFromRootItem(key);
+      const numItems = dimension?.numItems;
+      if (
+        typeof numItems === 'number' &&
+        typeof itemOffset === 'number' &&
+        itemOffset !== -1
+      ) {
+        const newOffset = offset * numItems + itemOffset;
+        const value = obj[key];
+        if (value) {
+          this.hydrateFromSparseNestedObject(
+            measureId,
+            value,
+            newOffset,
+            dimOffset + 1,
+          );
+        }
       }
     }
   }
 
-  setSingleData(measureId, coords, value) {
+  setSingleData(
+    measureId: string,
+    coords: Record<string, string>,
+    value: number,
+  ) {
     if (this.dimensionIds.some((dimensionId) => !coords[dimensionId])) {
       throw new Error(
         `setSingleData: no value for all dimensions. Dimensions: ${
@@ -507,7 +613,7 @@ class Cube {
     this.storedMeasures[measureId].setValue(position, value);
   }
 
-  getSingleData(measureId, coords) {
+  getSingleData(measureId: string, coords: Record<string, string>) {
     if (this.dimensionIds.some((dimensionId) => !coords[dimensionId])) {
       throw new Error(
         `getSingleData: no value for all dimensions. Dimensions: ${
@@ -527,10 +633,16 @@ class Cube {
         withMembers: true,
       });
 
-      const params = measures.reduce((acc, measureId) => {
-        acc[measureId] = this.storedMeasures[measureId].getValue(position);
-        return acc;
-      }, {});
+      const params = measures.reduce<Record<string, number>>(
+        (acc, measureId) => {
+          const val = this.storedMeasures[measureId]?.getValue(position);
+          if (typeof val === 'number') {
+            acc[measureId] = val;
+          }
+          return acc;
+        },
+        {},
+      );
 
       return this.computedMeasures[measureId].evaluate(params);
     }
@@ -542,12 +654,15 @@ class Cube {
    * This function returns an array of all possible combinations of dimension items
    * It takes an array of dimension ids to include from the combinations generation process
    */
-  scan(dimensionIds, cb) {
+  scan(
+    dimensionIds: string[],
+    cb: (dicedCube: Cube, dimensionItems: Record<string, string>) => void,
+  ) {
     const combinations = getCombinations(
       this.getDimensionItemsMap(dimensionIds),
     );
 
-    combinations.forEach((combination) => {
+    combinations.forEach((combination: Record<string, string>) => {
       const dicedCube = this.diceByDimensionItems(combination);
       cb(dicedCube, combination);
     });
@@ -557,12 +672,16 @@ class Cube {
    * This function takes an array of dimension ids and returns a new cube with
    * the specified dimensions sliced by the specified dimension items
    */
-  aggregateByDimensions(excludeDimensionIds) {
-    return this.dimensionIds
-      .filter((d) => !excludeDimensionIds.includes(d))
-      .reduce((acc, dimension) => {
-        return acc.slice(dimension, 'all', 'all');
-      }, this);
+  aggregateByDimensions(excludeDimensionIds: string[]) {
+    return (
+      this.dimensionIds
+        .filter((d) => !excludeDimensionIds.includes(d))
+        // @ts-ignore See if this is simple to fix later...
+        .reduce((acc, dimension) => {
+          // @ts-ignore Figure out if `TimeSlotPeriodicity` is the correct type
+          return acc.slice(dimension, 'all', 'all');
+        }, this)
+    );
   }
 
   /*
@@ -570,19 +689,20 @@ class Cube {
    * It takes optionally an oarray of dimension ids which will be used to filter the dimensions.
    * If no dimension ids are provided, all dimensions will be used.
    */
-  getDimensionItemsMap(dimensionIds) {
+  getDimensionItemsMap(dimensionIds: string[]) {
     const filteredDimensionIds =
       dimensionIds != null
         ? this.dimensionIds.filter((d) => dimensionIds.includes(d))
         : this.dimensionIds;
 
-    const dimensionItemsMap = filteredDimensionIds.reduce(
-      (acc, cur) => ({
-        ...acc,
-        [cur]: this.getDimension(cur).getItems(),
-      }),
-      {},
-    );
+    const dimensionItemsMap: Record<string, string[]> =
+      filteredDimensionIds.reduce(
+        (acc, cur) => ({
+          ...acc,
+          [cur]: this.getDimension(cur)?.getItems(),
+        }),
+        {},
+      );
 
     return dimensionItemsMap;
   }
@@ -592,20 +712,31 @@ class Cube {
    * Dimensions here is an object with dimension id as key and dimension items as value.
    * (similar to the output of getDimensionItemsMap)
    */
-  diceByDimensionItems(dimensionItemsMap, measures = [], reorder = false) {
+  diceByDimensionItems(
+    dimensionItemsMap: Record<string, string | string[]>,
+    measures: string[] | undefined = [],
+    reorder: boolean | undefined = false,
+  ) {
     const newDimensions = this.dimensions.slice();
     Object.entries(dimensionItemsMap).forEach(([dimensionId, items]) => {
       const dimIdx = this.getDimensionIndex(dimensionId);
       if (dimIdx === -1) return;
       const rootAttribute =
         dimensionId === 'time'
-          ? TimeSlot.fromValue(items).periodicity
-          : this.dimensions[dimIdx].rootAttribute;
-      newDimensions[dimIdx] = newDimensions[dimIdx].dice(
-        rootAttribute,
-        [items].flat(),
-        reorder,
-      );
+          ? // @ts-expect-error TODO: This is passing the incorrect data type of `string[]` possibly
+            TimeSlot.fromValue(items).periodicity
+          : this.dimensions[dimIdx]?.rootAttribute;
+
+      if (rootAttribute) {
+        const dicedDimItem = newDimensions[dimIdx]?.dice(
+          rootAttribute,
+          [items].flat(),
+          reorder,
+        );
+        if (dicedDimItem) {
+          newDimensions[dimIdx] = dicedDimItem;
+        }
+      }
     });
 
     // early return if no dimensions were diced
@@ -614,24 +745,35 @@ class Cube {
     }
 
     const newCube = new Cube(newDimensions);
-    const filterMeasures = (measureIds) =>
-      measures.length === 0
-        ? measureIds
-        : measureIds.filter((measureId) => measures.includes(measureId));
-    const computedMeasuresToCopy = filterMeasures(this.computedMeasureIds);
-    const storedMeasuresToCopy = filterMeasures(this.storedMeasureIds);
+    const computedMeasuresToCopy = filterMeasures(
+      this.computedMeasureIds,
+      measures,
+    );
+    const storedMeasuresToCopy = filterMeasures(
+      this.storedMeasureIds,
+      measures,
+    );
 
     computedMeasuresToCopy.forEach((measureId) => {
-      newCube.computedMeasures[measureId] = this.computedMeasures[measureId];
+      const val = this.computedMeasures[measureId];
+      if (val) {
+        newCube.computedMeasures[measureId] = val;
+      }
     });
     storedMeasuresToCopy.forEach((measureId) => {
-      newCube.storedMeasures[measureId] = this.storedMeasures[measureId].dice(
+      const val = this.storedMeasures[measureId]?.dice(
+        // @ts-ignore We are ignoring the `CatchAll` class here...
         this.dimensions,
         newDimensions,
       );
-      newCube.storedMeasuresRules[measureId] = cloneDeep(
-        this.storedMeasuresRules[measureId],
-      );
+      if (val) {
+        newCube.storedMeasures[measureId] = val;
+      }
+      if (this.storedMeasuresRules[measureId]) {
+        newCube.storedMeasuresRules[measureId] = cloneDeep(
+          this.storedMeasuresRules[measureId],
+        );
+      }
     });
 
     return newCube;
@@ -641,7 +783,10 @@ class Cube {
    * This function iterates over all possible combinations of dimension items and
    * calls the callback function with the sliced cube for each combination of dimension items
    */
-  iterateOverDimension(dimension, cb) {
+  iterateOverDimension(
+    dimension: string,
+    cb: (cube: Cube, dimensionItems: Record<string, string>) => void,
+  ) {
     const excludeDimensionIds = this.dimensionIds.filter(
       (id) => id !== dimension,
     );
@@ -658,11 +803,15 @@ class Cube {
 
     this.scan(excludeDimensionIds, (dicedCube, dimensionItems) => {
       const slicedCube = dicedCube.aggregateByDimensions([dimension]);
+      // @ts-ignore Figure out the type of aggregateByDimensions
       cb(slicedCube, dimensionItems);
     });
   }
 
-  getDistribution(measureId, dimensionsFilter = {}) {
+  getDistribution(
+    measureId: string,
+    dimensionsFilter: Record<string, string[]> | undefined = {},
+  ) {
     const spaceSum = this.getTotalForDimensionItems(
       measureId,
       dimensionsFilter,
@@ -672,30 +821,37 @@ class Cube {
     return totalSum === 0 ? spaceSum : spaceSum / totalSum;
   }
 
-  getTotal(measureId) {
-    return this.storedMeasures[measureId].total;
+  getTotal(measureId: string) {
+    const value = this.storedMeasures[measureId]?.total;
+    if (typeof value !== 'number') {
+      throw new Error(`getTotal: no such measure ${measureId}`);
+    }
+
+    return value;
   }
 
-  getTotalForDimensionItems(measureId, dimensionsFilter = {}) {
-    const _dimensionsFilter = mapValues(dimensionsFilter, (value) => {
-      if (typeof value === 'string') {
-        return [value];
-      }
-      return value;
-    });
+  getTotalForDimensionItems(
+    measureId: string,
+    dimensionsFilter: Record<string, string[]> | undefined = {},
+  ) {
+    const _dimensionsFilter = mapValues(dimensionsFilter);
 
     const unspecifiedDimensions = this.dimensionIds.filter(
       (dimensionId) => dimensionsFilter[dimensionId] === undefined,
     );
 
     const combinations = getCombinations(
-      unspecifiedDimensions.reduce(
-        (acc, dimensionId) => ({
-          ...acc,
-          [dimensionId]: this.getDimension(dimensionId).getItems(),
-        }),
-        _dimensionsFilter,
-      ),
+      unspecifiedDimensions.reduce((acc, dimensionId) => {
+        const val = this.getDimension(dimensionId)?.getItems();
+        if (val) {
+          return {
+            ...acc,
+            [dimensionId]: val,
+          };
+        }
+
+        return acc;
+      }, _dimensionsFilter),
     );
 
     const spaceSum = combinations.reduce((acc, combination) => {
@@ -706,10 +862,16 @@ class Cube {
     return spaceSum;
   }
 
-  getPosition(coords) {
+  getPosition(coords: Record<string, string>) {
     let position = 0;
     for (let i = 0; i < this.dimensions.length; ++i) {
       const dimension = this.dimensions[i];
+      if (!dimension) {
+        throw new Error(
+          `getPosition: no such dimension ${this.dimensionIds[i]}`,
+        );
+      }
+
       const item = coords[dimension.id];
       if (item === undefined)
         throw new Error(
@@ -727,9 +889,9 @@ class Cube {
     return position;
   }
 
-  hydrateFromCube(otherCube) {
+  hydrateFromCube(otherCube: Cube) {
     // Exception == the cubes have no overlap, it is safe to skip this one.
-    let compatibleCube;
+    let compatibleCube: Cube;
     try {
       compatibleCube = otherCube.reshape(this.dimensions);
     } catch {
@@ -738,27 +900,34 @@ class Cube {
 
     for (const measureId in this.storedMeasures)
       if (compatibleCube.storedMeasures[measureId])
-        this.storedMeasures[measureId].load(
+        this.storedMeasures[measureId]?.load(
           compatibleCube.storedMeasures[measureId],
+          // @ts-ignore We are ignoring the `CatchAll` class here...
           this.dimensions,
           compatibleCube.dimensions,
         );
   }
 
-  updateStoredMeasureRules(measureId, cb) {
-    const newRules = cb(this.storedMeasuresRules[measureId]);
-    this.storedMeasuresRules[measureId] = newRules;
+  updateStoredMeasureRules(
+    measureId: string,
+    cb: (rules: Record<string, string>) => Record<string, string>,
+  ) {
+    const existing = this.storedMeasuresRules[measureId];
+    if (existing) {
+      const newRules = cb(existing);
+      this.storedMeasuresRules[measureId] = newRules;
+    }
   }
 
-  project(dimensionIds) {
+  project(dimensionIds: string[]) {
     return this.keepDimensions(dimensionIds).reorderDimensions(dimensionIds);
   }
 
-  reorderDimensions(dimensionIds) {
+  reorderDimensions(dimensionIds: string[]) {
     // Check for no-op
     let dimIdx = 0;
     for (; dimIdx < this.dimensions.length; ++dimIdx) {
-      if (dimensionIds[dimIdx] !== this.dimensions[dimIdx].id) {
+      if (dimensionIds[dimIdx] !== this.dimensions[dimIdx]?.id) {
         break;
       }
     }
@@ -768,21 +937,33 @@ class Cube {
     }
 
     // Write a new cube
-    const newDimensions = dimensionIds.map((id) =>
-      this.dimensions.find((dim) => dim.id === id),
-    );
+    const newDimensions: (GenericDimension | TimeDimension)[] = [];
+
+    dimensionIds.forEach((id) => {
+      const found = this.dimensions.find((dim) => dim.id === id);
+      if (found) {
+        // @ts-ignore We are ignoring the `CatchAll` class here...
+        newDimensions.push(found as GenericDimension | TimeDimension);
+      }
+    });
     const newCube = new Cube(newDimensions);
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
-    for (const measureId in this.storedMeasures)
-      newCube.storedMeasures[measureId] = this.storedMeasures[
-        measureId
-      ].reorder(this.dimensions, newDimensions);
+    for (const measureId in this.storedMeasures) {
+      const value = this.storedMeasures[measureId];
+      if (value) {
+        newCube.storedMeasures[measureId] = value.reorder(
+          // @ts-ignore We are ignoring the `CatchAll` class here...
+          this.dimensions,
+          newDimensions,
+        );
+      }
+    }
 
     return newCube;
   }
 
-  swapDimensions(dim1, dim2) {
+  swapDimensions(dim1: string, dim2: string) {
     if (this.dimensionIds.indexOf(dim1) === -1)
       throw new Error(`swapDimensions: no such dimension ${dim1}`);
 
@@ -796,7 +977,12 @@ class Cube {
     );
   }
 
-  slice(dimensionId, attribute, value) {
+  slice(
+    dimensionId: string,
+    // TODO: This type is probably wrong...
+    attribute: TimeSlotPeriodicity,
+    value: string,
+  ) {
     const dimIndex = this.getDimensionIndex(dimensionId);
     if (dimIndex === -1)
       throw new Error(`slice: no such dimension: ${dimensionId}`);
@@ -806,14 +992,27 @@ class Cube {
     );
   }
 
-  diceRange(dimensionId, attribute, start, end) {
+  diceRange(
+    dimensionId: string,
+    attribute: string,
+    start: string,
+    end: string,
+  ) {
     const dimIdx = this.getDimensionIndex(dimensionId);
     const newDimensions = this.dimensions.slice();
-    newDimensions[dimIdx] = newDimensions[dimIdx].diceRange(
-      attribute,
-      start,
-      end,
-    );
+    const item = newDimensions[dimIdx];
+
+    if (item) {
+      const value = item.diceRange(
+        // @ts-ignore `TimeSlotPeriodicity` is the correct type
+        attribute,
+        start,
+        end,
+      );
+      if (value) {
+        newDimensions[dimIdx] = value;
+      }
+    }
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
       return this;
@@ -822,23 +1021,33 @@ class Cube {
     const newCube = new Cube(newDimensions);
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
-    for (const measureId in this.storedMeasures)
-      newCube.storedMeasures[measureId] = this.storedMeasures[measureId].dice(
+    for (const measureId in this.storedMeasures) {
+      const value = this.storedMeasures[measureId]?.dice(
+        // @ts-ignore We are ignoring the `CatchAll` class here...
         this.dimensions,
         newDimensions,
       );
+      if (value) {
+        newCube.storedMeasures[measureId] = value;
+      }
+    }
 
     return newCube;
   }
 
-  dice(dimensionId, attribute, items, reorder = false) {
+  dice(
+    dimensionId: string,
+    // TODO: This type is wrong...
+    attribute: TimeSlotPeriodicity,
+    items: string[],
+    reorder: boolean | undefined = false,
+  ) {
     const dimIdx = this.getDimensionIndex(dimensionId);
     const newDimensions = this.dimensions.slice();
-    newDimensions[dimIdx] = newDimensions[dimIdx].dice(
-      attribute,
-      items,
-      reorder,
-    );
+    const value = newDimensions[dimIdx]?.dice(attribute, items, reorder);
+    if (value) {
+      newDimensions[dimIdx] = value;
+    }
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
       return this;
@@ -847,17 +1056,26 @@ class Cube {
     const newCube = new Cube(newDimensions);
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
-    for (const measureId in this.storedMeasures)
-      newCube.storedMeasures[measureId] = this.storedMeasures[measureId].dice(
+    for (const measureId in this.storedMeasures) {
+      const value = this.storedMeasures[measureId]?.dice(
+        // @ts-ignore We are ignoring the `CatchAll` class here...
         this.dimensions,
         newDimensions,
       );
+      if (value) {
+        newCube.storedMeasures[measureId] = value;
+      }
+    }
 
     return newCube;
   }
 
-  copyMeasureData(sourceMeasureId, targetMeasureId, dimensionsFilter = {}) {
-    const _dimensionsFilter = {};
+  copyMeasureData(
+    sourceMeasureId: string,
+    targetMeasureId: string,
+    dimensionsFilter: Record<string, string | string[]> | undefined = {},
+  ) {
+    const _dimensionsFilter: Record<string, string[]> = {};
     for (const [key, value] of Object.entries(dimensionsFilter)) {
       if (typeof value === 'string') {
         _dimensionsFilter[key] = [value];
@@ -871,13 +1089,17 @@ class Cube {
     );
 
     const combinations = getCombinations(
-      unspecifiedDimensions.reduce(
-        (acc, dimensionId) => ({
-          ...acc,
-          [dimensionId]: this.getDimension(dimensionId).getItems(),
-        }),
-        _dimensionsFilter,
-      ),
+      unspecifiedDimensions.reduce((acc, dimensionId) => {
+        const value = this.getDimension(dimensionId)?.getItems();
+        if (value) {
+          return {
+            ...acc,
+            [dimensionId]: value,
+          };
+        }
+
+        return acc;
+      }, _dimensionsFilter),
     );
 
     for (let i = 0; i < combinations.length; i++) {
@@ -887,8 +1109,8 @@ class Cube {
     }
   }
 
-  keepDimensions(dimensionIds) {
-    let cube = this;
+  keepDimensions(dimensionIds: string[]) {
+    let cube: Cube = this;
     for (const dimension of this.dimensions) {
       if (!dimensionIds.includes(dimension.id)) {
         cube = cube.removeDimension(dimension.id);
@@ -898,8 +1120,8 @@ class Cube {
     return cube;
   }
 
-  removeDimensions(dimensionIds) {
-    let cube = this;
+  removeDimensions(dimensionIds: string[]) {
+    let cube: Cube = this;
     for (const dimensionId of dimensionIds) {
       cube = cube.removeDimension(dimensionId);
     }
@@ -908,19 +1130,22 @@ class Cube {
   }
 
   addDimension(
-    newDimension,
-    aggregation = {},
-    index = null,
-    distributions = {},
+    newDimension: GenericDimension | TimeDimension,
+    aggregation:
+      | Record<string, string | Record<string, string>>
+      | undefined = {},
+    index: number | null = null,
+    distributions: Record<string, number[]> | undefined = {},
   ) {
     // If index is not provided, we append the dimension
     const workingIndex = index === null ? this.dimensions.length : index;
 
-    const oldDimensions = this.dimensions.slice();
+    const oldDimensions: (CatchAll | GenericDimension | TimeDimension)[] =
+      this.dimensions.slice();
     oldDimensions.splice(
       workingIndex,
       0,
-      new CatchAllDimension(newDimension.id, newDimension),
+      new CatchAll(newDimension.id, newDimension),
     );
 
     const newDimensions = oldDimensions.slice();
@@ -930,45 +1155,62 @@ class Cube {
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     newCube.storedMeasuresRules = cloneDeep(this.storedMeasuresRules);
     for (const measureId in this.storedMeasuresRules) {
-      newCube.storedMeasuresRules[measureId][newDimension.id] =
-        aggregation[measureId];
+      const aggregatedItem = aggregation[measureId];
+      if (
+        aggregatedItem &&
+        newCube.storedMeasuresRules[measureId] &&
+        newCube.storedMeasuresRules[measureId][newDimension.id]
+      ) {
+        // @ts-ignore We verified the values should exist above.
+        newCube.storedMeasuresRules[measureId][newDimension.id] =
+          aggregatedItem;
+      }
     }
 
-    for (const measureId in this.storedMeasures)
-      newCube.storedMeasures[measureId] = this.storedMeasures[
-        measureId
-      ].drillDown(
-        oldDimensions,
-        newDimensions,
-        aggregation[measureId],
-        distributions[measureId],
-      );
+    for (const measureId in this.storedMeasures) {
+      const storedMeasure = this.storedMeasures[measureId];
+      if (storedMeasure) {
+        newCube.storedMeasures[measureId] = storedMeasure.drillDown(
+          // @ts-ignore We are ignoring the `CatchAll` class here...
+          oldDimensions,
+          newDimensions,
+          aggregation[measureId],
+          distributions[measureId],
+        );
+      }
+    }
 
     return newCube;
   }
 
-  removeDimension(dimensionId) {
+  removeDimension(dimensionId: string) {
     const newDimensions = this.dimensions.filter(
       (dim) => dim.id !== dimensionId,
     );
     const newCube = new Cube(newDimensions);
+    // @ts-ignore Figure out if `TimeSlotPeriodicity` is the correct type
     newCube.storedMeasures = this.drillUp(dimensionId, 'all').storedMeasures;
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     newCube.storedMeasuresRules = cloneDeep(this.storedMeasuresRules);
 
     for (const measureId in newCube.storedMeasuresRules) {
-      delete newCube.storedMeasuresRules[measureId][dimensionId];
+      if (newCube.storedMeasuresRules[measureId]) {
+        delete newCube.storedMeasuresRules[measureId][dimensionId];
+      }
     }
 
     return newCube;
   }
 
-  drillDown(dimensionId, attribute) {
+  drillDown(dimensionId: string, attribute: TimeSlotPeriodicity) {
     const dimIdx = this.getDimensionIndex(dimensionId);
-    if (this.dimensions[dimIdx].rootAttribute === attribute) return this;
+    if (this.dimensions[dimIdx]?.rootAttribute === attribute) return this;
 
     const newDimensions = this.dimensions.slice();
-    newDimensions[dimIdx] = newDimensions[dimIdx].drillDown(attribute);
+    const value = newDimensions[dimIdx]?.drillDown(attribute);
+    if (value) {
+      newDimensions[dimIdx] = value;
+    }
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) return this;
 
@@ -976,13 +1218,15 @@ class Cube {
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
     for (const measureId in this.storedMeasures) {
-      newCube.storedMeasures[measureId] = this.storedMeasures[
-        measureId
-      ].drillDown(
-        this.dimensions,
-        newDimensions,
-        this.storedMeasuresRules[measureId][dimensionId],
-      );
+      const value = this.storedMeasures[measureId];
+      if (value && this.storedMeasuresRules[measureId]) {
+        newCube.storedMeasures[measureId] = value.drillDown(
+          // @ts-ignore We are ignoring the `CatchAll` class here...
+          this.dimensions,
+          newDimensions,
+          this.storedMeasuresRules[measureId][dimensionId],
+        );
+      }
     }
 
     return newCube;
@@ -992,12 +1236,15 @@ class Cube {
    * Aggregate a dimension by group values.
    * ie: minutes by hour, or cities by region.
    */
-  drillUp(dimensionId, attribute) {
+  drillUp(dimensionId: string, attribute: TimeSlotPeriodicity) {
     const dimIdx = this.getDimensionIndex(dimensionId);
-    if (this.dimensions[dimIdx].rootAttribute === attribute) return this;
+    if (this.dimensions[dimIdx]?.rootAttribute === attribute) return this;
 
     const newDimensions = this.dimensions.slice();
-    newDimensions[dimIdx] = newDimensions[dimIdx].drillUp(attribute);
+    const value = newDimensions[dimIdx]?.drillUp(attribute);
+    if (value) {
+      newDimensions[dimIdx] = value;
+    }
     // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
     if (newDimensions[dimIdx] == this.dimensions[dimIdx]) {
       console.info(
@@ -1010,13 +1257,15 @@ class Cube {
     Object.assign(newCube.computedMeasures, this.computedMeasures);
     Object.assign(newCube.storedMeasuresRules, this.storedMeasuresRules);
     for (const measureId in this.storedMeasures) {
-      newCube.storedMeasures[measureId] = this.storedMeasures[
-        measureId
-      ].drillUp(
-        this.dimensions,
-        newDimensions,
-        this.storedMeasuresRules[measureId][dimensionId],
-      );
+      const value = this.storedMeasures[measureId];
+      if (value && this.storedMeasuresRules[measureId]) {
+        newCube.storedMeasures[measureId] = value.drillUp(
+          // @ts-ignore We are ignoring the `CatchAll` class here...
+          this.dimensions,
+          newDimensions,
+          this.storedMeasuresRules[measureId][dimensionId],
+        );
+      }
     }
 
     return newCube;
@@ -1029,20 +1278,35 @@ class Cube {
    * For instance, composing a cube with sells by day, and number of open hour per week,
    * to compute average sell by opening hour per week.
    */
-  compose(otherCube, union = false, fillWith = null) {
-    const newDimensions = this.dimensions.reduce((m, myDimension) => {
-      const otherDimension = otherCube.getDimension(myDimension.id);
+  compose(
+    otherCube: Cube,
+    union: boolean | undefined = false,
+    fillWith: Record<string, number> | null = null,
+  ) {
+    // @ts-ignore We are ignoring the `CatchAll` class here...
+    const newDimensions: (GenericDimension | TimeDimension)[] =
+      // @ts-ignore We are ignoring the `CatchAll` class here...
+      this.dimensions.reduce((m, myDimension) => {
+        const otherDimension = otherCube.getDimension(myDimension.id);
 
-      if (!otherDimension) {
-        return m;
-      }
+        if (!otherDimension) {
+          return m;
+        }
 
-      if (union) {
-        return [...m, myDimension.union(otherDimension)];
-      }
+        if (union) {
+          // @ts-ignore We are ignoring the `CatchAll` class here...
+          return [...m, myDimension.union(otherDimension)] as (
+            | GenericDimension
+            | TimeDimension
+          )[];
+        }
 
-      return [...m, myDimension.intersect(otherDimension)];
-    }, []);
+        // @ts-ignore We are ignoring the `CatchAll` class here...
+        return [...m, myDimension.intersect(otherDimension)] as (
+          | GenericDimension
+          | TimeDimension
+        )[];
+      }, []);
 
     const newCube = new Cube(newDimensions);
 
@@ -1050,8 +1314,8 @@ class Cube {
       newCube.createStoredMeasure(
         measureId,
         this.storedMeasuresRules[measureId],
-        this.storedMeasures[measureId]._type,
-        this.storedMeasures[measureId]._defaultValue,
+        this.storedMeasures[measureId]?._type,
+        this.storedMeasures[measureId]?._defaultValue,
       );
       if (fillWith?.[measureId]) {
         newCube.fillData(measureId, fillWith[measureId]);
@@ -1062,8 +1326,8 @@ class Cube {
       newCube.createStoredMeasure(
         measureId,
         otherCube.storedMeasuresRules[measureId],
-        otherCube.storedMeasures[measureId]._type,
-        otherCube.storedMeasures[measureId]._defaultValue,
+        otherCube.storedMeasures[measureId]?._type,
+        otherCube.storedMeasures[measureId]?._defaultValue,
       );
       if (fillWith?.[measureId]) {
         newCube.fillData(measureId, fillWith[measureId]);
@@ -1079,8 +1343,8 @@ class Cube {
     return newCube;
   }
 
-  reshape(targetDims) {
-    let newCube = this;
+  reshape(targetDims: (CatchAll | GenericDimension | TimeDimension)[]) {
+    let newCube: Cube = this;
 
     // Remove unneeded dimensions, and reorder.
     {
@@ -1097,8 +1361,9 @@ class Cube {
       const actualDim = newCube.dimensions[dimIndex];
       const targetDim = targetDims[dimIndex];
 
-      if (!actualDim || actualDim.id !== targetDim.id) {
+      if (!actualDim || (targetDim && actualDim.id !== targetDim.id)) {
         // fixme: we're not providing aggregation rules to the dimensions that must be added.
+        // @ts-ignore We are ignoring the `CatchAll` class here...
         newCube = newCube.addDimension(targetDim, {}, dimIndex);
       }
     }
@@ -1108,7 +1373,11 @@ class Cube {
       const actualDim = newCube.dimensions[dimIndex];
       const targetDim = targetDims[dimIndex];
 
-      if (actualDim.rootAttribute === targetDim.rootAttribute) {
+      if (!actualDim || !targetDim) {
+        continue;
+      }
+
+      if (actualDim?.rootAttribute === targetDim?.rootAttribute) {
         continue;
       }
 
@@ -1140,13 +1409,15 @@ class Cube {
         measure.serialize(),
       ),
       storedMeasuresRules: this.storedMeasuresRules,
-      computedMeasures: Object.keys(this.computedMeasures).reduce(
-        (acc, cur) => {
-          acc[cur] = this.computedMeasures[cur].toString();
-          return acc;
-        },
-        {},
-      ),
+      computedMeasures: Object.keys(this.computedMeasures).reduce<
+        Record<string, string>
+      >((acc, cur) => {
+        const value = this.computedMeasures[cur]?.toString();
+        if (value) {
+          acc[cur] = value;
+        }
+        return acc;
+      }, {}),
     });
   }
 
@@ -1154,35 +1425,39 @@ class Cube {
     return Buffer.from(this.serialize()).toString('base64');
   }
 
-  static deserialize(buffer) {
+  static deserialize(buffer: ArrayBuffer) {
     const data = fromBuffer(buffer);
-    const dimensions = data.dimensions.map((data) =>
-      DimensionFactory.deserialize(data),
-    );
+    // @ts-ignore Figure out correct fromBuffer type...
+    const dimensions = data?.dimensions?.map((data) => deserialize(data));
 
     const cube = new Cube(dimensions);
     cube.storedMeasures = {};
+    // @ts-ignore Figure out correct fromBuffer type...
     cube.storedMeasuresRules = data.storedMeasuresRules;
+    // @ts-ignore Figure out correct fromBuffer type...
     data.storedMeasuresKeys.forEach((key, i) => {
       cube.storedMeasures[key] = InMemoryStore.deserialize(
+        // @ts-ignore Figure out correct fromBuffer type...
         data.storedMeasures[i],
       );
     });
-    cube.computedMeasures = Object.keys(data.computedMeasures).reduce(
-      (acc, cur) => {
-        acc[cur] = getParser().parse(data.computedMeasures[cur]);
-        return acc;
-      },
-      {},
-    );
+    // @ts-ignore Figure out correct fromBuffer type...
+    cube.computedMeasures = Object.keys(data.computedMeasures).reduce<
+      Record<string, Expression>
+    >((acc, cur) => {
+      // @ts-ignore Figure out correct fromBuffer type...
+      const value = getParser().parse(data.computedMeasures[cur]);
+      if (value) {
+        acc[cur] = value;
+      }
+      return acc;
+    }, {});
     return cube;
   }
 
-  static deserializeFromBase64String(serializedBase64) {
+  static deserializeFromBase64String(serializedBase64: string) {
     const buffer = Buffer.from(serializedBase64, 'base64');
     // biome-ignore lint/complexity/noThisInStatic: <explanation>
     return this.deserialize(toArrayBuffer(buffer));
   }
 }
-
-module.exports = Cube;

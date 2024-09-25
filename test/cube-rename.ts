@@ -1,9 +1,10 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const createTestCube = require('./helpers/create-test-cube');
+import { createTestCube } from './helpers/create-test-cube.js';
+import type { Cube } from '../src/cube.js';
 
 describe('Measures', () => {
   describe('Renaming measures', () => {
-    let cube;
+    let cube: Cube;
 
     beforeEach(() => {
       cube = createTestCube(true, true);

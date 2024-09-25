@@ -1,10 +1,11 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const createTestCube = require('./helpers/create-test-cube');
-const { Cube, GenericDimension } = require('../src');
+import { Cube } from '../src/cube.js';
+import { createTestCube } from './helpers/create-test-cube.js';
+import { GenericDimension } from '../src/dimension/generic.js';
 
 describe('Accessors', () => {
   describe('getting data', () => {
-    let cube;
+    let cube: Cube;
 
     beforeEach(() => {
       cube = createTestCube(true, true);
@@ -68,7 +69,7 @@ describe('Accessors', () => {
   });
 
   describe('setting data', () => {
-    let cube;
+    let cube: Cube;
 
     beforeEach(() => {
       cube = createTestCube(true, false);

@@ -1,8 +1,8 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const { GenericDimension } = require('../src');
+import { GenericDimension } from '../src/dimension/generic.js';
 
 describe('GenericDimension', () => {
-  let dimension;
+  let dimension: GenericDimension;
 
   beforeEach(() => {
     dimension = new GenericDimension(

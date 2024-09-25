@@ -1,5 +1,7 @@
 import { assert, describe, it } from 'vitest';
-const { Cube, GenericDimension, TimeDimension } = require('../src');
+import { GenericDimension } from '../src/dimension/generic.js';
+import { Cube } from '../src/cube.js';
+import { TimeDimension } from '../src/dimension/time.js';
 
 describe('Operation between cubes', () => {
   describe('compose - intersection', () => {
@@ -73,7 +75,7 @@ describe('Operation between cubes', () => {
       assert.deepEqual(newCube.getNestedArray('routers'), [3, 4, 16]);
     });
 
-    it('should compose cubes if items are missing from both cubes', () => {
+    it.only('should compose cubes if items are missing from both cubes', () => {
       const period = new GenericDimension('period', 'season', [
         'summer',
         'winter',
@@ -106,6 +108,7 @@ describe('Operation between cubes', () => {
       ]);
 
       const newCube = cube1.compose(cube2);
+      console.log('newCube:', newCube);
       assert.deepEqual(newCube.dimensionIds, ['location', 'period']);
       assert.deepEqual(newCube.getNestedArray('antennas'), [
         [1, 2],

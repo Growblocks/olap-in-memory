@@ -1,6 +1,7 @@
-const { Cube, GenericDimension } = require('../../src');
+import { Cube } from '../../src/cube.js';
+import { GenericDimension } from '../../src/dimension/generic.js';
 
-module.exports = (createMesures = true, fill = true) => {
+export function createTestCube(createMesures = true, fill = true) {
   const period = new GenericDimension('period', 'season', ['summer', 'winter']);
   const location = new GenericDimension('location', 'city', [
     'paris',
@@ -55,4 +56,4 @@ module.exports = (createMesures = true, fill = true) => {
   }
 
   return cube;
-};
+}

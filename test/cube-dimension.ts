@@ -1,6 +1,8 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const createTestCube = require('./helpers/create-test-cube');
-const { Cube, GenericDimension, TimeDimension } = require('../src');
+import { Cube } from '../src/cube.js';
+import { TimeDimension } from '../src/dimension/time.js';
+import { GenericDimension } from '../src/dimension/generic.js';
+import { createTestCube } from './helpers/create-test-cube.js';
 
 describe('Dimension', () => {
   describe('addDimension', () => {
@@ -79,7 +81,7 @@ describe('Dimension', () => {
   });
 
   describe('removeDimension', () => {
-    let cube;
+    let cube: Cube;
 
     beforeEach(() => {
       const period = new GenericDimension('period', 'season', [
@@ -208,7 +210,7 @@ describe('Dimension', () => {
   });
 
   describe('reorderDimensions', () => {
-    let cube;
+    let cube: Cube;
 
     beforeEach(() => {
       cube = createTestCube(true, true);

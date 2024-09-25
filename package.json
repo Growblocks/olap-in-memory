@@ -4,9 +4,11 @@
 	"author": "Romain Gilliotte",
 	"license": "Unlicense",
 	"description": "An implementation of in-memory OLAP cubes for NodeJS and the browser.",
-	"main": "src/index.js",
-	"types": "src/index.d.ts",
 	"repository": "https://github.com/Growblocks/olap-in-memory.git",
+	"files": [
+		"dist"
+	],
+	"type": "module",
 	"dependencies": {
 		"@growblocks/expr-eval": "git+https://github.com/Growblocks/expr-eval#v2.0.6",
 		"lodash.clonedeep": "^4.5.0",
@@ -15,13 +17,18 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.8.3",
+		"@types/lodash.clonedeep": "^4.5.9",
+		"@types/lodash.merge": "^4.6.9",
 		"@vitest/coverage-v8": "^2.0.5",
 		"semantic-release": "^22.0.5",
+		"typescript": "^5.5.4",
 		"vitest": "^2.0.5"
 	},
 	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
 		"test": "vitest run --exclude \"**/*-benchmark.js\"",
-		"test:benchmark": "vitest run benchmark",
+		"test:watch": "vitest watch --exclude \"**/*-benchmark.js\"",
+		"test:benchmark": "vitest run benchmark -c vitest.config.benchmark.ts",
 		"lint": "biome check",
 		"lint:fix": "biome check --write",
 		"coverage": "vitest run --coverage --exclude \"**/*-benchmark.js\""

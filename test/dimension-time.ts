@@ -1,11 +1,17 @@
 import { assert, beforeEach, describe, it } from 'vitest';
-const { TimeDimension } = require('../src');
+import { TimeDimension } from '../src/dimension/time.js';
+import { TimeSlotPeriodicity } from '../src/dimension/TimeSlotPeriodicity.enum.js';
 
 describe('TimeDimension', () => {
-  let dimension;
+  let dimension: TimeDimension;
 
   beforeEach(() => {
-    dimension = new TimeDimension('time', 'month', '2009-12', '2010-02');
+    dimension = new TimeDimension(
+      'time',
+      TimeSlotPeriodicity.Month,
+      '2009-12',
+      '2010-02',
+    );
   });
 
   it('should give proper sizes', () => {
@@ -25,32 +31,52 @@ describe('TimeDimension', () => {
 
   it('should compute items for all attributes', () => {
     assert.deepEqual(dimension.getItems(), ['2009-12', '2010-01', '2010-02']);
-    assert.deepEqual(dimension.getItems('month'), [
+    assert.deepEqual(dimension.getItems(TimeSlotPeriodicity.Month), [
       '2009-12',
       '2010-01',
       '2010-02',
     ]);
-    assert.deepEqual(dimension.getItems('year'), ['2009', '2010']);
+    assert.deepEqual(dimension.getItems(TimeSlotPeriodicity.Year), [
+      '2009',
+      '2010',
+    ]);
   });
 
   it('should compute child items for all attributes', () => {
-    assert.equal(
-      dimension.getGroupItemFromRootItem('month', '2010-01'),
+    const mo = dimension.getGroupItemFromRootItem(
+      TimeSlotPeriodicity.Month,
       '2010-01',
     );
-    assert.equal(dimension.getGroupItemFromRootItem('year', '2010-01'), '2010');
+    console.log('mo:', mo);
+    assert.equal(mo, '2010-01');
+    assert.equal(
+      dimension.getGroupItemFromRootItem(TimeSlotPeriodicity.Year, '2010-01'),
+      '2010',
+    );
   });
 
   it('should compute child indexes for all attributes', () => {
-    assert.equal(dimension.getGroupIndexFromRootIndex('month', 0), 0);
-    assert.equal(dimension.getGroupIndexFromRootIndex('month', 1), 1);
+    assert.equal(
+      dimension.getGroupIndexFromRootIndex(TimeSlotPeriodicity.Month, 0),
+      0,
+    );
+    assert.equal(
+      dimension.getGroupIndexFromRootIndex(TimeSlotPeriodicity.Month, 1),
+      1,
+    );
 
-    assert.equal(dimension.getGroupIndexFromRootIndex('year', 0), 0);
-    assert.equal(dimension.getGroupIndexFromRootIndex('year', 1), 1);
+    assert.equal(
+      dimension.getGroupIndexFromRootIndex(TimeSlotPeriodicity.Year, 0),
+      0,
+    );
+    assert.equal(
+      dimension.getGroupIndexFromRootIndex(TimeSlotPeriodicity.Year, 1),
+      1,
+    );
   });
 
   it('should drill up', () => {
-    const childDim = dimension.drillUp('quarter');
+    const childDim = dimension.drillUp(TimeSlotPeriodicity.Quarter);
     assert.sameMembers(childDim.attributes, [
       'quarter',
       'semester',
@@ -61,7 +87,7 @@ describe('TimeDimension', () => {
   });
 
   it('should drill down', () => {
-    const childDim = dimension.drillDown('week_mon');
+    const childDim = dimension.drillDown(TimeSlotPeriodicity.WeekMon);
     assert.sameMembers(childDim.attributes, [
       'week_mon',
       'month',
@@ -90,7 +116,7 @@ describe('TimeDimension', () => {
   it('should intersect to dimensions with the same rootAttribute', () => {
     const otherDimension = new TimeDimension(
       'time',
-      'month',
+      TimeSlotPeriodicity.Month,
       '2010-01',
       '2010-02',
     );
@@ -103,7 +129,7 @@ describe('TimeDimension', () => {
   it('should intersect to dimensions with different rootAttribute', () => {
     const otherDimension = new TimeDimension(
       'time',
-      'quarter',
+      TimeSlotPeriodicity.Quarter,
       '2010-Q1',
       '2010-Q2',
     );
@@ -116,7 +142,7 @@ describe('TimeDimension', () => {
   it('should raise when intersecting dimensions with no common items', () => {
     const otherDimension = new TimeDimension(
       'time',
-      'quarter',
+      TimeSlotPeriodicity.Quarter,
       '2010-Q3',
       '2010-Q4',
     );
@@ -129,7 +155,7 @@ describe('TimeDimension', () => {
   it('should union two dimensions', () => {
     const otherDimension = new TimeDimension(
       'time',
-      'quarter',
+      TimeSlotPeriodicity.Quarter,
       '2010-Q3',
       '2010-Q4',
     );
@@ -149,18 +175,26 @@ describe('TimeDimension', () => {
     const newDimension = TimeDimension.deserialize(dimension.serialize());
     assert.deepEqual(dimension.getItems(), newDimension.getItems());
     assert.deepEqual(
-      dimension.getItems('quarter'),
-      newDimension.getItems('quarter'),
+      dimension.getItems(TimeSlotPeriodicity.Quarter),
+      newDimension.getItems(TimeSlotPeriodicity.Quarter),
     );
   });
 
   it('should allow dice on both start and end', () => {
-    const newDimension = dimension.diceRange('month', '2010-01', '2010-01');
+    const newDimension = dimension.diceRange(
+      TimeSlotPeriodicity.Month,
+      '2010-01',
+      '2010-01',
+    );
     assert.deepEqual(newDimension.getItems(), ['2010-01']);
   });
 
   it('should allow dice when going further with start', () => {
-    const newDimension = dimension.diceRange('month', '2000-01', '2020-01');
+    const newDimension = dimension.diceRange(
+      TimeSlotPeriodicity.Month,
+      '2000-01',
+      '2020-01',
+    );
     assert.deepEqual(newDimension.getItems(), [
       '2009-12',
       '2010-01',
@@ -169,17 +203,28 @@ describe('TimeDimension', () => {
   });
 
   it('should allow dice when going further with end', () => {
-    const newDimension = dimension.diceRange('month', '2010-01', '2020-01');
+    const newDimension = dimension.diceRange(
+      TimeSlotPeriodicity.Month,
+      '2010-01',
+      '2020-01',
+    );
     assert.deepEqual(newDimension.getItems(), ['2010-01', '2010-02']);
   });
 
   it('should allow dice when providing only begin', () => {
-    const newDimension = dimension.diceRange('month', '2010-01', null);
+    const newDimension = dimension.diceRange(
+      TimeSlotPeriodicity.Month,
+      '2010-01',
+    );
     assert.deepEqual(newDimension.getItems(), ['2010-01', '2010-02']);
   });
 
   it('should allow dice when providing only end', () => {
-    const newDimension = dimension.diceRange('month', null, '2010-01');
+    const newDimension = dimension.diceRange(
+      TimeSlotPeriodicity.Month,
+      undefined,
+      '2010-01',
+    );
     assert.deepEqual(newDimension.getItems(), ['2009-12', '2010-01']);
   });
 
@@ -192,31 +237,34 @@ describe('TimeDimension', () => {
   });
 
   it('should be able to humanize other labels', () => {
-    assert.deepEqual(dimension.getEntries('quarter', 'fr'), [
+    assert.deepEqual(dimension.getEntries(TimeSlotPeriodicity.Quarter, 'fr'), [
       ['2009-Q4', '4ème trim. 2009'],
       ['2010-Q1', '1er trim. 2010'],
     ]);
   });
 
   it('should be able to humanize labels after drillingUp', () => {
-    const newDimension = dimension.drillUp('quarter');
+    const newDimension = dimension.drillUp(TimeSlotPeriodicity.Quarter);
 
-    assert.deepEqual(newDimension.getEntries(null, 'fr'), [
+    assert.deepEqual(newDimension.getEntries(unde, 'fr'), [
       ['2009-Q4', '4ème trim. 2009'],
       ['2010-Q1', '1er trim. 2010'],
     ]);
   });
 
   it('should be able to humanize labels after dice', () => {
-    const newDimension = dimension.dice('quarter', ['2010-Q1']);
+    const newDimension = dimension.dice(TimeSlotPeriodicity.Quarter, [
+      '2010-Q1',
+    ]);
 
     assert.deepEqual(newDimension.getEntries(), [
       ['2010-01', 'January 2010'],
       ['2010-02', 'February 2010'],
     ]);
 
-    assert.deepEqual(newDimension.getEntries('quarter', 'fr'), [
-      ['2010-Q1', '1er trim. 2010'],
-    ]);
+    assert.deepEqual(
+      newDimension.getEntries(TimeSlotPeriodicity.Quarter, 'fr'),
+      [['2010-Q1', '1er trim. 2010']],
+    );
   });
 });
